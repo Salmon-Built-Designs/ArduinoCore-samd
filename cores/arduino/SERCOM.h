@@ -192,6 +192,7 @@ class SERCOM
     void prepareNackBitWIRE( void ) ;
     void prepareAckBitWIRE( void ) ;
     void prepareCommandBitsWire(uint8_t cmd);
+		void clearErrorWIRE ( void ) ;
 		bool startTransmissionWIRE(uint8_t address, SercomWireReadWriteFlag flag) ;
 		bool sendDataMasterWIRE(uint8_t data) ;
 		bool sendDataSlaveWIRE(uint8_t data) ;
@@ -200,9 +201,11 @@ class SERCOM
 		bool isBusIdleWIRE( void ) ;
 		bool isDataReadyWIRE( void ) ;
 		bool isStopDetectedWIRE( void ) ;
+		bool isErrorDetectedWIRE( void ) ;
 		bool isRestartDetectedWIRE( void ) ;
 		bool isAddressMatch( void ) ;
 		bool isMasterReadOperationWIRE( void ) ;
+		bool isSlaveExtendTimeoutWIRE( void ) ;
     bool isRXNackReceivedWIRE( void ) ;
 		int availableWIRE( void ) ;
 		uint8_t readDataWIRE( void ) ;
@@ -212,6 +215,7 @@ class SERCOM
 		uint8_t calculateBaudrateSynchronous(uint32_t baudrate) ;
 		uint32_t division(uint32_t dividend, uint32_t divisor) ;
 		void initClockNVIC( void ) ;
+		void initSlowClock ( void ) ;
 };
 
 #endif

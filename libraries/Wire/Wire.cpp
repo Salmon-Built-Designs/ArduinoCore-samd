@@ -260,6 +260,19 @@ void TwoWire::onService(void)
 
       sercom->prepareCommandBitsWire(0x03);
     }
+    else if(sercom->isErrorDetectedWIRE()) 
+    {
+      if (sercom->isSlaveExtendTimeoutWIRE() && !sercom->isMasterReadOperationWIRE() && available() > 0) {
+        //Calling onReceiveCallback, if exists
+        if(onReceiveCallback)
+        {
+          onReceiveCallback(available());
+        }
+        
+        rxBuffer.clear();
+      }
+      sercom->clearErrorWIRE();
+    }
   }
 }
 

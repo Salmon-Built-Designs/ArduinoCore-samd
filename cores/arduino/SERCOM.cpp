@@ -405,10 +405,17 @@ void SERCOM::initSlaveWIRE( uint8_t ucAddress )
 {
   // Initialize the peripheral clock and interruption
   initClockNVIC() ;
+  initSlowClock() ;
   resetWIRE() ;
 
   // Set slave mode
   sercom->I2CS.CTRLA.bit.MODE = I2C_SLAVE_OPERATION ;
+
+  // Enable timeouts
+  // SEXTTOUT can only be enabled when LOWTOUT is,
+  // see errata section in the datasheet
+  sercom->I2CS.CTRLA.bit.LOWTOUTEN = 1;
+  sercom->I2CS.CTRLA.bit.SEXTTOEN = 1;
 
   sercom->I2CS.ADDR.reg = SERCOM_I2CS_ADDR_ADDR( ucAddress & 0x7Ful ) | // 0x7F, select only 7 bits
                           SERCOM_I2CS_ADDR_ADDRMASK( 0x3FFul ) ;    // 0x3FF all bits set
@@ -416,7 +423,8 @@ void SERCOM::initSlaveWIRE( uint8_t ucAddress )
   // Set the interrupt register
   sercom->I2CS.INTENSET.reg = SERCOM_I2CS_INTENSET_PREC |   // Stop
                               SERCOM_I2CS_INTENSET_AMATCH | // Address Match
-                              SERCOM_I2CS_INTENSET_DRDY ;   // Data Ready
+                              SERCOM_I2CS_INTENSET_DRDY |   // Data Ready
+                              SERCOM_I2CS_INTENSET_ERROR ;  // Error
 
   while ( sercom->I2CM.SYNCBUSY.bit.SYSOP != 0 )
   {
@@ -478,6 +486,11 @@ void SERCOM::prepareCommandBitsWire(uint8_t cmd)
   } else {
     sercom->I2CS.CTRLB.bit.CMD = cmd;
   }
+}
+
+void SERCOM::clearErrorWIRE( void )
+{
+  sercom->I2CS.INTFLAG.bit.ERROR = 1;
 }
 
 bool SERCOM::startTransmissionWIRE(uint8_t address, SercomWireReadWriteFlag flag)
@@ -590,6 +603,11 @@ bool SERCOM::isStopDetectedWIRE( void )
   return sercom->I2CS.INTFLAG.bit.PREC;
 }
 
+bool SERCOM::isErrorDetectedWIRE( void )
+{
+  return sercom->I2CS.INTFLAG.bit.ERROR;
+}
+
 bool SERCOM::isRestartDetectedWIRE( void )
 {
   return sercom->I2CS.STATUS.bit.SR;
@@ -603,6 +621,11 @@ bool SERCOM::isAddressMatch( void )
 bool SERCOM::isMasterReadOperationWIRE( void )
 {
   return sercom->I2CS.STATUS.bit.DIR;
+}
+
+bool SERCOM::isSlaveExtendTimeoutWIRE( void )
+{
+  return sercom->I2CS.STATUS.bit.SEXTTOUT;
 }
 
 bool SERCOM::isRXNackReceivedWIRE( void )
@@ -686,6 +709,18 @@ void SERCOM::initClockNVIC( void )
   GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID( clockId ) | // Generic Clock 0 (SERCOMx)
                       GCLK_CLKCTRL_GEN_GCLK0 | // Generic Clock Generator 0 is source
                       GCLK_CLKCTRL_CLKEN ;
+
+  while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY )
+  {
+    /* Wait for synchronization */
+  }
+}
+
+void SERCOM::initSlowClock ( void )
+{
+  GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID( GCM_SERCOMx_SLOW ) | // Slow Clock (SERCOMx_SLOW)
+                  GCLK_CLKCTRL_GEN_GCLK1 | // Generic Clock Generator 1 is source (32 kHz)
+                  GCLK_CLKCTRL_CLKEN ;
 
   while ( GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY )
   {
