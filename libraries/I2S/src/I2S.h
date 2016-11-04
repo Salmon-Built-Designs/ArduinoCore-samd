@@ -41,7 +41,7 @@ public:
   void onTransmit(void(*)(void));
 
 private:
-  I2s *_i2s = I2S;
+  volatile I2s *_i2s = I2S;
 
   SERCOM *_p_sercom;
   uint8_t _uc_index;

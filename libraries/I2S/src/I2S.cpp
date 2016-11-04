@@ -14,6 +14,18 @@ I2SClass::I2SClass(SERCOM *p_sercom, uint8_t uc_index, uint8_t uc_pinSD, uint8_t
 
 int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock)
 {
+	switch (mode) {
+		case I2S_PHILIPS_MODE:
+			break;
+
+		case I2S_RIGHT_JUSTIFIED_MODE:
+		case I2S_LEFT_JUSTIFIED_MODE:
+		case I2S_DSP_MODE:
+		default:
+			Serial.println("invalid mode");
+			return 1;
+	}
+
 	switch (bitsPerSample) {
 		case 8:
 		case 16:
@@ -22,27 +34,26 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 			break;
 
 		default:
+			Serial.println("invalid bits per sample");
 			return 1;
 	}
+
+	while(_i2s->SYNCBUSY.bit.SWRST);
+	_i2s->CTRLA.bit.SWRST = 1;
 
 	PM->APBCMASK.reg |= PM_APBCMASK_I2S;
 
 	while (GCLK->STATUS.bit.SYNCBUSY);
-
 	GCLK->GENDIV.bit.ID = GCLK_CLKCTRL_GEN_GCLK3_Val;
 	GCLK->GENDIV.bit.DIV = SystemCoreClock / (sampleRate * 2 * bitsPerSample);
 
-	Serial.println(GCLK->GENDIV.bit.DIV);
-
 	while (GCLK->STATUS.bit.SYNCBUSY);
-
 	GCLK->GENCTRL.bit.ID = GCLK_CLKCTRL_GEN_GCLK3_Val;
 	GCLK->GENCTRL.bit.SRC = GCLK_GENCTRL_SRC_DFLL48M_Val;
 	GCLK->GENCTRL.bit.IDC = 1;
 	GCLK->GENCTRL.bit.GENEN = 1;
 
 	while (GCLK->STATUS.bit.SYNCBUSY);
-
 	GCLK->CLKCTRL.bit.ID = (_uc_index == 0) ? I2S_GCLK_ID_0 : I2S_GCLK_ID_1;
 	GCLK->CLKCTRL.bit.GEN = GCLK_CLKCTRL_GEN_GCLK3_Val;
 	GCLK->CLKCTRL.bit.CLKEN = 1;
@@ -50,10 +61,9 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 	while (GCLK->STATUS.bit.SYNCBUSY);
 
 	while(_i2s->SYNCBUSY.bit.ENABLE);
-
 	_i2s->CTRLA.bit.ENABLE = 0;
 
-	// TODO: change these based on mode
+	// TODO: change these based on mode and drive clock
 	_i2s->CLKCTRL[_uc_index].bit.MCKOUTINV = 0;
 	_i2s->CLKCTRL[_uc_index].bit.SCKOUTINV = 0;
 	_i2s->CLKCTRL[_uc_index].bit.FSOUTINV = 0;
@@ -103,8 +113,8 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 	_i2s->SERCTRL[_uc_index].bit.SLOTDIS7 = 0;
 	_i2s->SERCTRL[_uc_index].bit.BITREV = I2S_SERCTRL_BITREV_MSBIT_Val;
 	_i2s->SERCTRL[_uc_index].bit.WORDADJ = I2S_SERCTRL_WORDADJ_RIGHT_Val;
-	_i2s->SERCTRL[_uc_index].bit.SLOTADJ = I2S_SERCTRL_SLOTADJ_RIGHT_Val;
-	_i2s->SERCTRL[_uc_index].bit.TXSAME = I2S_SERCTRL_TXSAME_SAME_Val; //I2S_SERCTRL_TXSAME_ZERO_Val;
+	_i2s->SERCTRL[_uc_index].bit.SLOTADJ = I2S_SERCTRL_SLOTADJ_LEFT_Val;
+	_i2s->SERCTRL[_uc_index].bit.TXSAME = I2S_SERCTRL_TXSAME_ZERO_Val; // I2S_SERCTRL_TXSAME_SAME_Val
 	_i2s->SERCTRL[_uc_index].bit.CLKSEL = (_uc_index == 0) ? I2S_SERCTRL_CLKSEL_CLK0_Val : I2S_SERCTRL_CLKSEL_CLK1_Val;
 	_i2s->SERCTRL[_uc_index].bit.SERMODE = I2S_SERCTRL_SERMODE_TX_Val;
 	_i2s->SERCTRL[_uc_index].bit.TXDEFAULT = I2S_SERCTRL_TXDEFAULT_ZERO_Val;
@@ -132,24 +142,19 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 	pinPeripheral(_uc_sd, PIO_COM);
 
 	while(_i2s->SYNCBUSY.bit.ENABLE);
-
 	_i2s->CTRLA.bit.ENABLE = 1;
 
 	if (_uc_index == 0) {
 		while(_i2s->SYNCBUSY.bit.CKEN0);
-
 		_i2s->CTRLA.bit.CKEN0 = 1;
 
 		while(_i2s->SYNCBUSY.bit.SEREN0);
-
 		_i2s->CTRLA.bit.SEREN0 = 1;
 	} else {
-		while(_i2s->SYNCBUSY.bit.SEREN0);
-
+		while(_i2s->SYNCBUSY.bit.CKEN1);
 		_i2s->CTRLA.bit.CKEN1 = 1;
 
 		while(_i2s->SYNCBUSY.bit.SEREN1);
-
 		_i2s->CTRLA.bit.SEREN1 = 1;
 	}
 
@@ -183,14 +188,10 @@ void I2SClass::flush()
 size_t I2SClass::write(uint8_t data)
 {
 	if (_uc_index == 0) {
-		_i2s->INTFLAG.bit.TXUR0 = 1;
-
-		while (_i2s->INTFLAG.bit.TXRDY0);
+		while (!_i2s->INTFLAG.bit.TXRDY0);
 		while (_i2s->SYNCBUSY.bit.DATA0);
 	} else {
-		_i2s->INTFLAG.bit.TXUR1 = 1;
-
-		while (_i2s->INTFLAG.bit.TXRDY1);
+		while (!_i2s->INTFLAG.bit.TXRDY1);
 		while (_i2s->SYNCBUSY.bit.DATA1);
 	}
 
