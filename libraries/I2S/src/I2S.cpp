@@ -187,6 +187,31 @@ void I2SClass::flush()
 
 size_t I2SClass::write(uint8_t data)
 {
+	return write((int)data);
+}
+
+size_t I2SClass::write(const uint8_t *buffer, size_t size)
+{
+	return 0;
+}
+
+size_t I2SClass::availableForWrite()
+{
+	return 0;
+}
+
+int I2SClass::read(int8_t data[], int size)
+{
+	return 0;
+}
+
+int I2SClass::write(short data)
+{
+	return write((int)data);
+}
+
+int I2SClass::write(int data)
+{
 	if (_uc_index == 0) {
 		while (!_i2s->INTFLAG.bit.TXRDY0);
 		while (_i2s->SYNCBUSY.bit.DATA0);
@@ -203,22 +228,7 @@ size_t I2SClass::write(uint8_t data)
 		_i2s->INTFLAG.bit.TXRDY1 = 1;
 	}
 
-	return 0;
-}
-
-size_t I2SClass::write(const uint8_t *buffer, size_t size)
-{
-	return 0;
-}
-
-size_t I2SClass::availableForWrite()
-{
-	return 0;
-}
-
-int I2SClass::read(int8_t data[], int size)
-{
-	return 0;
+	return 1;
 }
 
 /*

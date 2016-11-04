@@ -29,6 +29,10 @@ public:
 
   virtual size_t availableForWrite();
 
+
+  int write(short);
+  int write(int);
+
   int read(int8_t data[], int size);
   int read(int16_t data[], int size);
   int read(int32_t data[], int size);
