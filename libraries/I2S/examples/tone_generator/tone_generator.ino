@@ -108,6 +108,8 @@ void playWave(int16_t* buffer, uint16_t length, float frequency, float seconds) 
     // Duplicate the sample so it's sent to both the left and right channel.
     // It appears the order is right channel, left channel if you want to write
     // stereo sound.
+    while(I2S.availableForWrite() < 2);
+    
     I2S.write(sample);
     I2S.write(sample);
   }

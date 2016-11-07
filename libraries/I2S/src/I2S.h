@@ -10,6 +10,8 @@ typedef enum {
   I2S_DSP_MODE
 } i2s_mode_t;
 
+#define I2S_BUFFER_SIZE 256
+
 class I2SClass : public Stream
 {
 public:
@@ -29,9 +31,9 @@ public:
 
   virtual size_t availableForWrite();
 
-
   int write(short);
   int write(int);
+  int write(int32_t);
 
   int read(int8_t data[], int size);
   int read(int16_t data[], int size);
@@ -44,6 +46,8 @@ public:
   void onReceive(void(*)(int));
   void onTransmit(void(*)(void));
 
+  void onService(void);
+
 private:
   volatile I2s *_i2s = I2S;
 
@@ -52,6 +56,12 @@ private:
   uint8_t _uc_sd;
   uint8_t _uc_sck;
   uint8_t _uc_fs;
+
+  int _i_bits_per_sample;
+
+  int32_t _aui_buffer[I2S_BUFFER_SIZE];
+  volatile int _i_head;
+  volatile int _i_tail;
 };
 
 #undef I2S
