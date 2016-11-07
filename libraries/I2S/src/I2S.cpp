@@ -166,12 +166,6 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 	NVIC_EnableIRQ(I2S_IRQn);
 	NVIC_SetPriority(I2S_IRQn, (1 << __NVIC_PRIO_BITS) - 1);  /* set Priority */
 
-	if (_uc_index == 0) {
-		_i2s->INTENSET.bit.TXRDY0 = 1;
-	} else {
-		_i2s->INTENSET.bit.TXRDY1 = 1;
-	}
-
 	return 0;
 }
 
@@ -261,6 +255,13 @@ int I2SClass::write(int32_t data)
 	_aui_buffer[i] = data;
 	_i_head = i;
 
+
+	if (_uc_index == 0) {
+		_i2s->INTENSET.bit.TXRDY0 = 1;
+	} else {
+		_i2s->INTENSET.bit.TXRDY1 = 1;
+	}
+
 	return 1;
 }
 
@@ -268,15 +269,15 @@ void I2SClass::onService() {
 
 	if (_uc_index == 0) {
 		if (_i2s->INTFLAG.bit.TXRDY0) {
-			int32_t data = 0;
-
 			if (_i_head != _i_tail) {
-				data = _aui_buffer[_i_tail];
+				int32_t data = _aui_buffer[_i_tail];
 				_i_tail = ((uint32_t)(_i_tail + 1) % I2S_BUFFER_SIZE);
-			}
 
-			while (_i2s->SYNCBUSY.bit.DATA0);
-			_i2s->DATA[_uc_index].bit.DATA = data;
+				while (_i2s->SYNCBUSY.bit.DATA0);
+				_i2s->DATA[_uc_index].bit.DATA = data;
+			} else {
+				_i2s->INTENSET.bit.TXRDY0 = 0;
+			}
 
 			_i2s->INTFLAG.bit.TXRDY0 = 1;
 		}
