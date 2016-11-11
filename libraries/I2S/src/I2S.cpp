@@ -1,19 +1,23 @@
 #include <Arduino.h>
 #include <wiring_private.h>
 
+#include "utility/DMA.h"
+
 #include "I2S.h"
 
-I2SClass::I2SClass(SERCOM *p_sercom, uint8_t uc_index, uint8_t uc_pinSD, uint8_t uc_pinSCK, uint8_t uc_pinFS) :
-	_p_sercom(p_sercom),
+I2SClass::I2SClass(uint8_t uc_index, uint8_t uc_clock_generator, uint8_t uc_pinSD, uint8_t uc_pinSCK, uint8_t uc_pinFS) :
 	_uc_index(uc_index),
+	_uc_clock_generator(uc_clock_generator),
 	_uc_sd(uc_pinSD),
 	_uc_sck(uc_pinSCK),
 	_uc_fs(uc_pinFS),
 
-	_i_head(0),
-	_i_tail(0)
+	_i_dma_channel(-1),
+	freeBuffers(2),
+	inIndex(0),
+
+	_onTransmit(NULL)
 {
-	memset(_aui_buffer, 0, sizeof(_aui_buffer));
 }
 
 int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock)
@@ -35,12 +39,19 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 		case 16:
 		case 24:
 		case 32:
-			_i_bits_per_sample = bitsPerSample;
 			break;
 
 		default:
 			Serial.println("invalid bits per sample");
 			return 1;
+	}
+
+	DMA.begin();
+
+	_i_dma_channel = DMA.allocateChannel();
+
+	if (_i_dma_channel < 0) {
+		return 1;
 	}
 
 	while(_i2s->SYNCBUSY.bit.SWRST);
@@ -49,18 +60,18 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 	PM->APBCMASK.reg |= PM_APBCMASK_I2S;
 
 	while (GCLK->STATUS.bit.SYNCBUSY);
-	GCLK->GENDIV.bit.ID = GCLK_CLKCTRL_GEN_GCLK3_Val;
+	GCLK->GENDIV.bit.ID = _uc_clock_generator;
 	GCLK->GENDIV.bit.DIV = SystemCoreClock / (sampleRate * 2 * bitsPerSample);
 
 	while (GCLK->STATUS.bit.SYNCBUSY);
-	GCLK->GENCTRL.bit.ID = GCLK_CLKCTRL_GEN_GCLK3_Val;
+	GCLK->GENCTRL.bit.ID = _uc_clock_generator;
 	GCLK->GENCTRL.bit.SRC = GCLK_GENCTRL_SRC_DFLL48M_Val;
 	GCLK->GENCTRL.bit.IDC = 1;
 	GCLK->GENCTRL.bit.GENEN = 1;
 
 	while (GCLK->STATUS.bit.SYNCBUSY);
 	GCLK->CLKCTRL.bit.ID = (_uc_index == 0) ? I2S_GCLK_ID_0 : I2S_GCLK_ID_1;
-	GCLK->CLKCTRL.bit.GEN = GCLK_CLKCTRL_GEN_GCLK3_Val;
+	GCLK->CLKCTRL.bit.GEN = _uc_clock_generator;
 	GCLK->CLKCTRL.bit.CLKEN = 1;
 
 	while (GCLK->STATUS.bit.SYNCBUSY);
@@ -163,8 +174,33 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 		_i2s->CTRLA.bit.SEREN1 = 1;
 	}
 
-	NVIC_EnableIRQ(I2S_IRQn);
-	NVIC_SetPriority(I2S_IRQn, (1 << __NVIC_PRIO_BITS) - 1);  /* set Priority */
+	DMA.incSrc(_i_dma_channel);
+	DMA.onTransferComplete(_i_dma_channel, I2SClass::onDmaTransferComplete);
+	DMA.onTransferError(_i_dma_channel, I2SClass::onDmaTransferError);
+
+	if (_uc_index == 0) {
+		DMA.setTriggerSource(_i_dma_channel, I2S_DMAC_ID_TX_0);
+	} else {
+		DMA.setTriggerSource(_i_dma_channel, I2S_DMAC_ID_TX_1);
+	}
+
+	switch (bitsPerSample) {
+		case 32:
+			DMA.setTransferWidth(_i_dma_channel, 32);
+			break;
+
+		case 24:
+			DMA.setTransferWidth(_i_dma_channel, 32);
+			break;
+
+		case 16:
+			DMA.setTransferWidth(_i_dma_channel, 16);
+			break;
+
+		case 8:
+			DMA.setTransferWidth(_i_dma_channel, 8);
+			break;
+	}
 
 	return 0;
 }
@@ -195,99 +231,81 @@ void I2SClass::flush()
 
 size_t I2SClass::write(uint8_t data)
 {
-	return write((int32_t)data);
+	return write(&data, sizeof(data));
 }
 
 size_t I2SClass::write(const uint8_t *buffer, size_t size)
 {
-	size_t written = 0;
-	int bytesPerSample = (_i_bits_per_sample) / 8;
+	__disable_irq();
 
-	size = (size / bytesPerSample) * bytesPerSample;
-
-	while (size) {
-		int32_t data;
-
-		memcpy(&data, buffer + written, bytesPerSample);
-		written += bytesPerSample;
-		size -= bytesPerSample;
-
-		if (write(data) == 0) {
-			break;
-		}
+	if (freeBuffers == 0) {
+		__enable_irq();
+		return 0;
 	}
 
-	return written;
+	if (size > I2S_BUFFER_SIZE) {
+		size = I2S_BUFFER_SIZE;
+	}
+
+	freeBuffers--;
+	memcpy(&_auc_buffer[inIndex], buffer, size);
+
+	if (freeBuffers == 1) {
+		DMA.transfer(_i_dma_channel, &_auc_buffer[inIndex], (void*)&_i2s->DATA[_uc_index].reg, size);
+	}
+
+	if (inIndex == 0) {
+		inIndex = I2S_BUFFER_SIZE;
+	} else {
+		inIndex = 0;
+	}
+
+	__enable_irq();
+
+	return size;
 }
 
 size_t I2SClass::availableForWrite()
 {
-	if (_i_head >= _i_tail) {
-		return I2S_BUFFER_SIZE - 1 - _i_head + _i_tail;
+	return (freeBuffers * I2S_BUFFER_SIZE);
+}
+
+void I2SClass::onTransmit(void(*function)(void))
+{
+	_onTransmit = function;
+}
+
+void I2SClass::onDmaTransferComplete()
+{
+	I2S.onTransferComplete();
+}
+
+void I2SClass::onDmaTransferError()
+{
+	I2S.onTransferError();
+}
+
+void I2SClass::onTransferComplete(void)
+{
+	freeBuffers++;
+
+	int outIndex;
+
+	if (inIndex == 0) {
+		outIndex = I2S_BUFFER_SIZE;
 	} else {
-		return _i_tail - _i_head - 1;
+		outIndex = 0;
+	}
+
+	DMA.transfer(_i_dma_channel, &_auc_buffer[outIndex], (void*)&_i2s->DATA[_uc_index].reg, 512);
+
+	if (_onTransmit) {
+		_onTransmit();
 	}
 }
 
-int I2SClass::read(int8_t data[], int size)
+void I2SClass::onTransferError(void)
 {
-	return 0;
-}
-
-int I2SClass::write(short data)
-{
-	return write((int32_t)data);
-}
-
-int I2SClass::write(int data)
-{
-	return write((int32_t)data);
-}
-
-int I2SClass::write(int32_t data)
-{
-	int i = ((uint32_t)(_i_head + 1) % I2S_BUFFER_SIZE);
-
-	if (i == _i_tail) {
-		return 0;
-	}
-
-	_aui_buffer[i] = data;
-	_i_head = i;
-
-
-	if (_uc_index == 0) {
-		_i2s->INTENSET.bit.TXRDY0 = 1;
-	} else {
-		_i2s->INTENSET.bit.TXRDY1 = 1;
-	}
-
-	return 1;
-}
-
-void I2SClass::onService() {
-
-	if (_uc_index == 0) {
-		if (_i2s->INTFLAG.bit.TXRDY0) {
-			if (_i_head != _i_tail) {
-				int32_t data = _aui_buffer[_i_tail];
-				_i_tail = ((uint32_t)(_i_tail + 1) % I2S_BUFFER_SIZE);
-
-				while (_i2s->SYNCBUSY.bit.DATA0);
-				_i2s->DATA[_uc_index].bit.DATA = data;
-			} else {
-				_i2s->INTENSET.bit.TXRDY0 = 0;
-			}
-
-			_i2s->INTFLAG.bit.TXRDY0 = 1;
-		}
-	}
-}
-
-extern "C" {
-	void I2S_Handler() {
-		I2S.onService();
-	}
 }
 
 /*
@@ -307,4 +325,7 @@ extern "C" {
 +--------+--------------+-----------+-----------------+
 */
 
-I2SClass I2S(&sercom2, 0, 9, 1, 0);
+
+// I2SClass I2S(0, GCLK_CLKCTRL_GEN_GCLK3_Val, 9, 1, 0);
+
+I2SClass I2S(0, GCLK_CLKCTRL_GEN_GCLK3_Val, A6, 2, 3);
