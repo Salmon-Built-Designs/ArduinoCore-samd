@@ -13,11 +13,14 @@ I2SClass::I2SClass(uint8_t uc_index, uint8_t uc_clock_generator, uint8_t uc_pinS
 	_uc_fs(uc_pinFS),
 
 	_i_dma_channel(-1),
-	freeBuffers(2),
-	inIndex(0),
+	
+	_b_dma_transfer_in_progress(false),
+	_i_buffer_index(0),
 
 	_onTransmit(NULL)
 {
+	_i_buffer_length[0] = 0;
+	_i_buffer_length[1] = 0;
 }
 
 int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock)
@@ -238,26 +241,29 @@ size_t I2SClass::write(const uint8_t *buffer, size_t size)
 {
 	__disable_irq();
 
-	if (freeBuffers == 0) {
+	int space = (I2S_BUFFER_SIZE - _i_buffer_length[_i_buffer_index]);
+	if (size > space) {
+		size = space;
+	}
+
+	if (space == 0) {
 		__enable_irq();
 		return 0;
 	}
 
-	if (size > I2S_BUFFER_SIZE) {
-		size = I2S_BUFFER_SIZE;
-	}
+	memcpy(&_auc_buffer[_i_buffer_index][_i_buffer_length[_i_buffer_index]], buffer, size);
 
-	freeBuffers--;
-	memcpy(&_auc_buffer[inIndex], buffer, size);
+	_i_buffer_length[_i_buffer_index] += size;
 
-	if (freeBuffers == 1) {
-		DMA.transfer(_i_dma_channel, &_auc_buffer[inIndex], (void*)&_i2s->DATA[_uc_index].reg, size);
-	}
+	if (_b_dma_transfer_in_progress == false) {
+		_b_dma_transfer_in_progress = true;
+		DMA.transfer(_i_dma_channel, _auc_buffer[_i_buffer_index], (void*)&_i2s->DATA[_uc_index].reg, _i_buffer_length[_i_buffer_index]);
 
-	if (inIndex == 0) {
-		inIndex = I2S_BUFFER_SIZE;
-	} else {
-		inIndex = 0;
+		if (_i_buffer_index == 0) {
+			_i_buffer_index = 1;
+		} else {
+			_i_buffer_index = 0;
+		}
 	}
 
 	__enable_irq();
@@ -267,7 +273,15 @@ size_t I2SClass::write(const uint8_t *buffer, size_t size)
 
 size_t I2SClass::availableForWrite()
 {
-	return (freeBuffers * I2S_BUFFER_SIZE);
+	int space = 0;
+
+	__disable_irq();
+
+	space = (I2S_BUFFER_SIZE - _i_buffer_length[_i_buffer_index]);
+
+	__enable_irq();
+
+	return space;
 }
 
 void I2SClass::onTransmit(void(*function)(void))
@@ -287,17 +301,18 @@ void I2SClass::onDmaTransferError()
 
 void I2SClass::onTransferComplete(void)
 {
-	freeBuffers++;
+	int nextTransferLength = _i_buffer_length[_i_buffer_index];
 
-	int outIndex;
+	if (nextTransferLength) {
+		DMA.transfer(_i_dma_channel, _auc_buffer[_i_buffer_index], (void*)&_i2s->DATA[_uc_index].reg, nextTransferLength);
 
-	if (inIndex == 0) {
-		outIndex = I2S_BUFFER_SIZE;
-	} else {
-		outIndex = 0;
+		if (_i_buffer_index == 0) {
+			_i_buffer_index = 1;
+		} else {
+			_i_buffer_index = 0;
+		}
+		_i_buffer_length[_i_buffer_index] = 0;
 	}
-
-	DMA.transfer(_i_dma_channel, &_auc_buffer[outIndex], (void*)&_i2s->DATA[_uc_index].reg, 512);
 
 	if (_onTransmit) {
 		_onTransmit();

@@ -55,9 +55,10 @@ private:
 
   int _i_dma_channel;
 
-  uint8_t* _auc_buffer[I2S_BUFFER_SIZE * 2];
-  volatile int freeBuffers;
-  volatile int inIndex;
+  volatile bool _b_dma_transfer_in_progress;
+  uint8_t* _auc_buffer[2][I2S_BUFFER_SIZE];
+  volatile int _i_buffer_length[2];
+  volatile int _i_buffer_index;
 
   void (*_onTransmit)(void);
 };
