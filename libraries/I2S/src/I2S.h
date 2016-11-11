@@ -31,11 +31,12 @@ public:
 
   virtual size_t availableForWrite();
 
-  int write(int32_t);
+  size_t write(int);
+  size_t write(int32_t);
+  size_t write(const void *buffer, size_t size);
 
   void onReceive(void(*)(int));
   void onTransmit(void(*)(void));
-
 
 private:
   static void onDmaTransferComplete();

@@ -40,10 +40,10 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 	switch (bitsPerSample) {
 		case 8:
 		case 16:
-		case 24:
 		case 32:
 			break;
 
+		case 24:
 		default:
 			Serial.println("invalid bits per sample");
 			return 1;
@@ -234,10 +234,54 @@ void I2SClass::flush()
 
 size_t I2SClass::write(uint8_t data)
 {
-	return write(&data, sizeof(data));
+	return write((int32_t)data);
 }
 
 size_t I2SClass::write(const uint8_t *buffer, size_t size)
+{
+	return write((const void*)buffer, size);
+}
+
+size_t I2SClass::availableForWrite()
+{
+	int space = 0;
+
+	__disable_irq();
+
+	space = (I2S_BUFFER_SIZE - _i_buffer_length[_i_buffer_index]);
+
+	__enable_irq();
+
+	return space;
+}
+
+size_t I2SClass::write(int sample)
+{
+	return write((int32_t)sample);
+}
+
+size_t I2SClass::write(int32_t sample)
+{
+	if (_uc_index == 0) {
+		while (!_i2s->INTFLAG.bit.TXRDY0);
+		while (_i2s->SYNCBUSY.bit.DATA0);
+	} else {
+		while (!_i2s->INTFLAG.bit.TXRDY1);
+		while (_i2s->SYNCBUSY.bit.DATA1);
+	}
+
+	_i2s->DATA[_uc_index].bit.DATA = sample;
+
+	if (_uc_index == 0) {
+		_i2s->INTFLAG.bit.TXRDY0 = 1;
+	} else {
+		_i2s->INTFLAG.bit.TXRDY1 = 1;
+	}
+
+	return 1;
+}
+
+size_t I2SClass::write(const void *buffer, size_t size)
 {
 	__disable_irq();
 
@@ -246,7 +290,7 @@ size_t I2SClass::write(const uint8_t *buffer, size_t size)
 		size = space;
 	}
 
-	if (space == 0) {
+	if (size == 0) {
 		__enable_irq();
 		return 0;
 	}
@@ -269,19 +313,6 @@ size_t I2SClass::write(const uint8_t *buffer, size_t size)
 	__enable_irq();
 
 	return size;
-}
-
-size_t I2SClass::availableForWrite()
-{
-	int space = 0;
-
-	__disable_irq();
-
-	space = (I2S_BUFFER_SIZE - _i_buffer_length[_i_buffer_index]);
-
-	__enable_irq();
-
-	return space;
 }
 
 void I2SClass::onTransmit(void(*function)(void))
@@ -312,6 +343,8 @@ void I2SClass::onTransferComplete(void)
 			_i_buffer_index = 0;
 		}
 		_i_buffer_length[_i_buffer_index] = 0;
+	} else {
+		_b_dma_transfer_in_progress = false;
 	}
 
 	if (_onTransmit) {
