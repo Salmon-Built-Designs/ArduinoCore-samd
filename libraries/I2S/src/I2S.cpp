@@ -264,13 +264,6 @@ void I2SClass::disableClock() {
   while (GCLK->STATUS.bit.SYNCBUSY);
 }
 
-void I2SClass::onDmaTransferComplete(int channel)
-{
-  if (I2S._dmaChannel == channel) {
-    I2S.onTransferComplete();
-  }
-}
-
 void I2SClass::onTransferComplete(void)
 {
   if (_doubleBuffer.available()) {
@@ -286,24 +279,15 @@ void I2SClass::onTransferComplete(void)
   }
 }
 
-/*
+void I2SClass::onDmaTransferComplete(int channel)
+{
+#if I2S_INTERFACES_COUNT > 0
+  if (I2S._dmaChannel == channel) {
+    I2S.onTransferComplete();
+  }
+#endif
+}
 
-+--------+--------------+-----------+-----------------+
-| I2S    | Pad          | Zero      | MKR1000         |
-+--------+--------------+-----------+-----------------+
-| SD[0]  | PA07 or PA19 | 9 or 12   | A6 or 10 (MISO) |
-| MCK[0] | PA09 or PB17 | 3 or ?    | 12 (SCL) or ?   |
-| SCK[0] | PA10 or PA20 | 1 or 6    | 2 or 6          |
-| FS[0]  | PA11 or PA21 | 0 or ?    | 3 or 7          |
-+--------+--------------------------+-----------------+
-| SD[1]  | PA08 or PB16 | 4 or ?    | 11 (SDA) or ?   |
-| MCK[1] | PB10         | 23 (MOSI) | 4               |
-| SCK[1] | PB11         | 24 (SCK)  | 5               |
-| FS[1]  | PB12         | ?         | ?               |
-+--------+--------------+-----------+-----------------+
-*/
-
-
-I2SClass I2S(0, GCLK_CLKCTRL_GEN_GCLK3_Val, 9, 1, 0);
-
-// I2SClass I2S(0, GCLK_CLKCTRL_GEN_GCLK3_Val, A6, 2, 3);
+#if I2S_INTERFACES_COUNT > 0
+I2SClass I2S(I2S_DEVICE, I2S_CLOCK_GENERATOR, PIN_I2S_SD, PIN_I2S_SCK, PIN_I2S_FS);
+#endif

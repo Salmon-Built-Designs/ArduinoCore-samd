@@ -58,9 +58,9 @@ private:
   void enableClock(int divider);
   void disableClock();
 
-  static void onDmaTransferComplete(int);
-
   void onTransferComplete(void);
+
+  static void onDmaTransferComplete(int);
 
 private:
   static int _beginCount;
@@ -81,6 +81,8 @@ private:
 
 #undef I2S
 
+#if I2S_INTERFACES_COUNT > 0
 extern I2SClass I2S;
+#endif
 
 #endif
