@@ -38,17 +38,17 @@ class DMAClass
     void incDst(int channel);
     int transfer(int channel, void* src, void* dst, uint16_t size);
 
-    void onTransferComplete(int channel, void(*function)(void));
-    void onTransferError(int channel, void(*function)(void));
+    void onTransferComplete(int channel, void(*function)(int));
+    void onTransferError(int channel, void(*function)(int));
 
     void onService();
 
   private:
-    int _beginCount;
+    static int _beginCount;
     uint32_t _channelMask;
 
-    void (*_transferCompleteCallbacks[NUM_DMA_CHANNELS])(void);
-    void (*_transferErrorCallbacks[NUM_DMA_CHANNELS])(void);
+    void (*_transferCompleteCallbacks[NUM_DMA_CHANNELS])(int);
+    void (*_transferErrorCallbacks[NUM_DMA_CHANNELS])(int);
 
     DmacDescriptor _descriptors[NUM_DMA_CHANNELS] __attribute__ ((aligned (16)));
     DmacDescriptor _descriptorsWriteBack[NUM_DMA_CHANNELS]  __attribute__ ((aligned (16)));

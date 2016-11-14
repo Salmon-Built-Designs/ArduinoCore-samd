@@ -1,13 +1,28 @@
+/*
+  Copyright (c) 2016 Arduino LLC.  All right reserved.
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
 #ifndef _I2S_H_INCLUDED
 #define _I2S_H_INCLUDED
 
 #include <Arduino.h>
 
 typedef enum {
-  I2S_PHILIPS_MODE,
-  I2S_RIGHT_JUSTIFIED_MODE,
-  I2S_LEFT_JUSTIFIED_MODE,
-  I2S_DSP_MODE
+  I2S_PHILIPS_MODE
 } i2s_mode_t;
 
 #define I2S_BUFFER_SIZE 512
@@ -15,17 +30,18 @@ typedef enum {
 class I2SClass : public Stream
 {
 public:
-  I2SClass(uint8_t uc_index, uint8_t uc_clock_generator, uint8_t uc_pinSD, uint8_t uc_pinSCK, uint8_t uc_pinFS);
+  I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, uint8_t sckPin, uint8_t fsPin);
 
   int begin(int mode, long sampleRate, int bitsPerSample, int driveClock = 1);
-
   void end();
 
+  // from Stream
   virtual int available();
   virtual int read();
   virtual int peek();
   virtual void flush();
 
+  // from Print
   virtual size_t write(uint8_t);
   virtual size_t write(const uint8_t *buffer, size_t size);
 
@@ -35,31 +51,28 @@ public:
   size_t write(int32_t);
   size_t write(const void *buffer, size_t size);
 
-  void onReceive(void(*)(int));
   void onTransmit(void(*)(void));
 
 private:
-  static void onDmaTransferComplete();
-  static void onDmaTransferError();
+  void enableClock(int divider);
+  void disableClock();
+
+  static void onDmaTransferComplete(int);
+  static void onDmaTransferError(int);
 
   void onTransferComplete(void);
   void onTransferError(void);
 
 private:
-  volatile I2s *_i2s = I2S;
+  static int _beginCount;
 
-  uint8_t _uc_index;
-  uint8_t _uc_clock_generator;
-  uint8_t _uc_sd;
-  uint8_t _uc_sck;
-  uint8_t _uc_fs;
+  uint8_t _deviceIndex;
+  uint8_t _clockGenerator;
+  uint8_t _sdPin;
+  uint8_t _sckPin;
+  uint8_t _fsPin;
 
-  int _i_dma_channel;
-
-  volatile bool _b_dma_transfer_in_progress;
-  uint8_t* _auc_buffer[2][I2S_BUFFER_SIZE];
-  volatile int _i_buffer_length[2];
-  volatile int _i_buffer_index;
+  int _dmaChannel;
 
   void (*_onTransmit)(void);
 };
