@@ -157,6 +157,10 @@ public:
     }
   }
 
+  inline void* data(int index) {
+    return (void*)&i2s.DATA[index].reg;
+  }
+
 private:
   volatile I2s &i2s;
 };

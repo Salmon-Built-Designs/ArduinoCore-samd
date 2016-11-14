@@ -21,18 +21,19 @@
 
 #include <Arduino.h>
 
+#include "utility/I2SDoubleBuffer.h"
+
 typedef enum {
   I2S_PHILIPS_MODE
 } i2s_mode_t;
 
-#define I2S_BUFFER_SIZE 512
 
 class I2SClass : public Stream
 {
 public:
   I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, uint8_t sckPin, uint8_t fsPin);
 
-  int begin(int mode, long sampleRate, int bitsPerSample, int driveClock = 1);
+  int begin(int mode, long sampleRate, int bitsPerSample);
   void end();
 
   // from Stream
@@ -58,10 +59,8 @@ private:
   void disableClock();
 
   static void onDmaTransferComplete(int);
-  static void onDmaTransferError(int);
 
   void onTransferComplete(void);
-  void onTransferError(void);
 
 private:
   static int _beginCount;
@@ -73,6 +72,9 @@ private:
   uint8_t _fsPin;
 
   int _dmaChannel;
+
+  bool _dmaTransferInProgress;
+  I2SDoubleBuffer _doubleBuffer;
 
   void (*_onTransmit)(void);
 };

@@ -36,12 +36,13 @@ I2SClass::I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, u
   _fsPin(fsPin),
 
   _dmaChannel(-1),
+  _dmaTransferInProgress(false),
 
   _onTransmit(NULL)
 {
 }
 
-int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock)
+int I2SClass::begin(int mode, long sampleRate, int bitsPerSample)
 {
   switch (mode) {
     case I2S_PHILIPS_MODE:
@@ -101,9 +102,10 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, int driveClock
 
   DMA.incSrc(_dmaChannel);
   DMA.onTransferComplete(_dmaChannel, I2SClass::onDmaTransferComplete);
-  DMA.onTransferError(_dmaChannel, I2SClass::onDmaTransferError);
   DMA.setTriggerSource(_dmaChannel, i2sd.dmaTriggerSource(_deviceIndex));
   DMA.setTransferWidth(_dmaChannel, bitsPerSample);
+
+  _doubleBuffer.reset();
 
   return 0;
 }
@@ -165,7 +167,20 @@ size_t I2SClass::write(const uint8_t *buffer, size_t size)
 
 size_t I2SClass::availableForWrite()
 {
-  return 2;
+  uint8_t enableInterrupts = ((__get_PRIMASK() & 0x1) == 0);
+  size_t space;
+
+  // disable interrupts,
+  __disable_irq();
+
+  space = _doubleBuffer.availableForWrite();
+
+  if (enableInterrupts) {
+    // re-enable the interrupts
+    __enable_irq();
+  }
+
+  return space;
 }
 
 size_t I2SClass::write(int sample)
@@ -186,7 +201,28 @@ size_t I2SClass::write(int32_t sample)
 
 size_t I2SClass::write(const void *buffer, size_t size)
 {
-  return 0;
+  uint8_t enableInterrupts = ((__get_PRIMASK() & 0x1) == 0);
+  size_t written;
+
+  // disable interrupts,
+  __disable_irq();
+
+  written = _doubleBuffer.write(buffer, size);
+
+  if (_dmaTransferInProgress == false) {
+    _dmaTransferInProgress = true;
+
+    DMA.transfer(_dmaChannel, _doubleBuffer.data(), i2sd.data(_deviceIndex), _doubleBuffer.available());
+
+    _doubleBuffer.swap();
+  }
+
+  if (enableInterrupts) {
+    // re-enable the interrupts
+    __enable_irq();
+  }
+
+  return written;
 }
 
 void I2SClass::onTransmit(void(*function)(void))
@@ -235,19 +271,19 @@ void I2SClass::onDmaTransferComplete(int channel)
   }
 }
 
-void I2SClass::onDmaTransferError(int channel)
-{
-  if (I2S._dmaChannel == channel) {
-    I2S.onTransferError();
-  }
-}
-
 void I2SClass::onTransferComplete(void)
 {
-}
+  if (_doubleBuffer.available()) {
+    DMA.transfer(_dmaChannel, _doubleBuffer.data(), i2sd.data(_deviceIndex), _doubleBuffer.available());
 
-void I2SClass::onTransferError(void)
-{
+    _doubleBuffer.swap();
+  } else {
+    _dmaTransferInProgress = false;
+  }
+
+  if (_onTransmit) {
+    _onTransmit();
+  }
 }
 
 /*
