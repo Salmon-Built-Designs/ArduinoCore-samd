@@ -59,7 +59,7 @@ void DMAClass::begin()
 
     // enable the interrupt at lowest priority
     NVIC_EnableIRQ(DMAC_IRQn);
-    NVIC_SetPriority(I2S_IRQn, (1 << __NVIC_PRIO_BITS) - 1);
+    NVIC_SetPriority(DMAC_IRQn, (1 << __NVIC_PRIO_BITS) - 1);
   }
 
   _beginCount++;
