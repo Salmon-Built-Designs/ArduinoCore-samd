@@ -116,13 +116,14 @@ void I2SClass::end()
     DMA.freeChannel(_dmaChannel);
   }
 
+  _dmaTransferInProgress = false;
+
   i2sd.disableSerializer(_deviceIndex);
   i2sd.disableClockUnit(_deviceIndex);
 
   pinMode(_sdPin, INPUT);
   pinMode(_fsPin, INPUT);
   pinMode(_sckPin, INPUT);
-
 
   disableClock();
 

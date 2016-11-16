@@ -73,7 +73,7 @@ private:
 
   int _dmaChannel;
 
-  bool _dmaTransferInProgress;
+  volatile bool _dmaTransferInProgress;
   I2SDoubleBuffer _doubleBuffer;
 
   void (*_onTransmit)(void);
