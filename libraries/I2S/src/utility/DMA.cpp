@@ -114,7 +114,7 @@ void DMAClass::freeChannel(int channel)
   DMAC->CHID.bit.ID = channel;
   DMAC->CHCTRLA.bit.ENABLE = 0;
 
-  _channelMask &= (1 << channel);
+  _channelMask &= ~(1 << channel);
 }
 
 void DMAClass::setPriorityLevel(int channel, int level)

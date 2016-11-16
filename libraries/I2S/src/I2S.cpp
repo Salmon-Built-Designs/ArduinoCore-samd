@@ -112,7 +112,7 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample)
 
 void I2SClass::end()
 {
-  if (_dmaChannel > 0) {
+  if (_dmaChannel > -1) {
     DMA.freeChannel(_dmaChannel);
   }
 
