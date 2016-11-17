@@ -34,13 +34,15 @@ public:
 
   size_t availableForWrite();
   size_t write(const void *buffer, size_t size);
+  size_t read(void *buffer, size_t size);
   void* data();
   size_t available();
-  void swap();
+  void swap(int length = 0);
 
 private:
   uint8_t _buffer[2][I2S_BUFFER_SIZE];
   volatile int _length[2];
+  volatile int _readOffset[2];
   volatile int _index; 
 };
 

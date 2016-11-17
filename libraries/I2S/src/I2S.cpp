@@ -40,7 +40,8 @@ I2SClass::I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, u
   _bitsPerSample(0),
   _dmaTransferInProgress(false),
 
-  _onTransmit(NULL)
+  _onTransmit(NULL),
+  _onReceive(NULL)
 {
 }
 
@@ -143,20 +144,35 @@ int I2SClass::available()
     enableReceiver();
   }
 
-  return (_bitsPerSample / 8);
+  uint8_t enableInterrupts = ((__get_PRIMASK() & 0x1) == 0);
+  size_t avail;
+
+  // disable interrupts,
+  __disable_irq();
+
+  avail = _doubleBuffer.available();
+
+  if (_dmaTransferInProgress == false && _doubleBuffer.available() == 0) {
+    _dmaTransferInProgress = true;
+
+    DMA.transfer(_dmaChannel, i2sd.data(_deviceIndex), _doubleBuffer.data(), _doubleBuffer.availableForWrite());
+
+    _doubleBuffer.swap();
+  }
+
+  if (enableInterrupts) {
+    // re-enable the interrupts
+    __enable_irq();
+  }
+
+  return avail;
 }
 
 int I2SClass::read()
 {
-  if (_state != I2S_STATE_RECEIVER) {
-    enableReceiver();
-  }
+  int sample = 0;
 
-  while(!i2sd.rxReady(_deviceIndex));
-
-  int sample = i2sd.readData(_deviceIndex);
-
-  i2sd.clearRxReady(_deviceIndex);
+  read(&sample, _bitsPerSample / 8);
 
   return sample;
 }
@@ -202,6 +218,35 @@ size_t I2SClass::availableForWrite()
   return space;
 }
 
+int I2SClass::read(void* buffer, size_t size)
+{
+  if (_state != I2S_STATE_RECEIVER) {
+    enableReceiver();
+  }
+
+  uint8_t enableInterrupts = ((__get_PRIMASK() & 0x1) == 0);
+
+  // disable interrupts,
+  __disable_irq();
+
+  int read = _doubleBuffer.read(buffer, size);
+
+  if (_dmaTransferInProgress == false && _doubleBuffer.available() == 0) {
+    _dmaTransferInProgress = true;
+
+    DMA.transfer(_dmaChannel, i2sd.data(_deviceIndex), _doubleBuffer.data(), _doubleBuffer.availableForWrite());
+
+    _doubleBuffer.swap();
+  }
+
+  if (enableInterrupts) {
+    // re-enable the interrupts
+    __enable_irq();
+  }
+
+  return read;
+}
+
 size_t I2SClass::write(int sample)
 {
   return write((int32_t)sample);
@@ -236,7 +281,7 @@ size_t I2SClass::write(const void *buffer, size_t size)
 
   written = _doubleBuffer.write(buffer, size);
 
-  if (_dmaTransferInProgress == false) {
+  if (_dmaTransferInProgress == false && _doubleBuffer.available()) {
     _dmaTransferInProgress = true;
 
     DMA.transfer(_dmaChannel, _doubleBuffer.data(), i2sd.data(_deviceIndex), _doubleBuffer.available());
@@ -255,6 +300,11 @@ size_t I2SClass::write(const void *buffer, size_t size)
 void I2SClass::onTransmit(void(*function)(void))
 {
   _onTransmit = function;
+}
+
+void I2SClass::onReceive(void(*function)(void))
+{
+  _onReceive = function;
 }
 
 void I2SClass::enableClock(int divider)
@@ -313,7 +363,7 @@ void I2SClass::enableReceiver()
   i2sd.enableClockUnit(_deviceIndex);
   i2sd.enableSerializer(_deviceIndex);
 
-  DMA.incSrc(_dmaChannel);
+  DMA.incDst(_dmaChannel);
   DMA.onTransferComplete(_dmaChannel, I2SClass::onDmaTransferComplete);
   DMA.setTriggerSource(_dmaChannel, i2sd.dmaTriggerSource(_deviceIndex));
   DMA.setTransferWidth(_dmaChannel, _bitsPerSample);
@@ -323,16 +373,30 @@ void I2SClass::enableReceiver()
 
 void I2SClass::onTransferComplete(void)
 {
-  if (_doubleBuffer.available()) {
-    DMA.transfer(_dmaChannel, _doubleBuffer.data(), i2sd.data(_deviceIndex), _doubleBuffer.available());
+  if (_state == I2S_STATE_TRANSMITTER) {
+    if (_doubleBuffer.available()) {
+      DMA.transfer(_dmaChannel, _doubleBuffer.data(), i2sd.data(_deviceIndex), _doubleBuffer.available());
 
-    _doubleBuffer.swap();
+      _doubleBuffer.swap();
+    } else {
+      _dmaTransferInProgress = false;
+    }
+
+    if (_onTransmit) {
+      _onTransmit();
+    }
   } else {
-    _dmaTransferInProgress = false;
-  }
+    if (_doubleBuffer.available() == 0) {
+      DMA.transfer(_dmaChannel, i2sd.data(_deviceIndex), _doubleBuffer.data(), _doubleBuffer.availableForWrite());
 
-  if (_onTransmit) {
-    _onTransmit();
+      _doubleBuffer.swap(_doubleBuffer.availableForWrite());
+    } else {
+      _dmaTransferInProgress = false;
+    }
+
+    if (_onReceive) {
+      _onReceive();
+    }
   }
 }
 

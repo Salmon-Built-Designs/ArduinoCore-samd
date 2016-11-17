@@ -47,11 +47,14 @@ public:
 
   virtual size_t availableForWrite();
 
+  int read(void* buffer, size_t size);
+
   size_t write(int);
   size_t write(int32_t);
   size_t write(const void *buffer, size_t size);
 
   void onTransmit(void(*)(void));
+  void onReceive(void(*)(void));
 
 private:
   void enableClock(int divider);
@@ -87,6 +90,7 @@ private:
   I2SDoubleBuffer _doubleBuffer;
 
   void (*_onTransmit)(void);
+  void (*_onReceive)(void);
 };
 
 #undef I2S

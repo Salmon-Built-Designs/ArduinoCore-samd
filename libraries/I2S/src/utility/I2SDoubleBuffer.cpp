@@ -34,11 +34,13 @@ void I2SDoubleBuffer::reset()
   _index = 0;
   _length[0] = 0;
   _length[1] = 0;
+  _readOffset[0] = 0;
+  _readOffset[1] = 0;
 }
 
 size_t I2SDoubleBuffer::availableForWrite()
 {
-  return (I2S_BUFFER_SIZE - _length[_index]);
+  return (I2S_BUFFER_SIZE - (_length[_index] - _readOffset[_index]));
 }
 
 size_t I2SDoubleBuffer::write(const void *buffer, size_t size)
@@ -60,6 +62,24 @@ size_t I2SDoubleBuffer::write(const void *buffer, size_t size)
   return size;
 }
 
+size_t I2SDoubleBuffer::read(void *buffer, size_t size)
+{
+  size_t avail = available();
+
+  if (size > avail) {
+    size = avail;
+  }
+
+  if (size == 0) {
+    return 0;
+  }
+
+  memcpy(buffer, &_buffer[_index][_readOffset[_index]], size);
+  _readOffset[_index] += size;
+
+  return size;
+}
+
 void* I2SDoubleBuffer::data()
 {
   return (void*)_buffer[_index];
@@ -67,10 +87,10 @@ void* I2SDoubleBuffer::data()
 
 size_t I2SDoubleBuffer::available()
 {
-  return _length[_index];
+  return _length[_index] - _readOffset[_index];
 }
 
-void I2SDoubleBuffer::swap()
+void I2SDoubleBuffer::swap(int length)
 {
   if (_index == 0) {
     _index = 1;
@@ -78,5 +98,6 @@ void I2SDoubleBuffer::swap()
     _index = 0;
   }
 
-  _length[_index] = 0;
+  _length[_index] = length;
+  _readOffset[_index] = 0;
 }
