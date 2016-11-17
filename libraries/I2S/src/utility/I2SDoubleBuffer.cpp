@@ -80,6 +80,23 @@ size_t I2SDoubleBuffer::read(void *buffer, size_t size)
   return size;
 }
 
+size_t I2SDoubleBuffer::peek(void *buffer, size_t size)
+{
+  size_t avail = available();
+
+  if (size > avail) {
+    size = avail;
+  }
+
+  if (size == 0) {
+    return 0;
+  }
+
+  memcpy(buffer, &_buffer[_index][_readOffset[_index]], size);
+
+  return size;
+}
+
 void* I2SDoubleBuffer::data()
 {
   return (void*)_buffer[_index];

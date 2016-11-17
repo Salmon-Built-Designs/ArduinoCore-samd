@@ -179,7 +179,20 @@ int I2SClass::read()
 
 int I2SClass::peek()
 {
-  return 0;
+  uint8_t enableInterrupts = ((__get_PRIMASK() & 0x1) == 0);
+  int sample = 0;
+
+  // disable interrupts,
+  __disable_irq();
+
+  _doubleBuffer.peek(&sample, _bitsPerSample / 8);
+
+  if (enableInterrupts) {
+    // re-enable the interrupts
+    __enable_irq();
+  }
+
+  return sample;
 }
 
 void I2SClass::flush()
