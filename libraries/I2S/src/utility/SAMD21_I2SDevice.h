@@ -91,6 +91,10 @@ public:
     i2s.SERCTRL[index].bit.SERMODE = I2S_SERCTRL_SERMODE_TX_Val;
   }
 
+  inline void setRxMode(int index) {
+    i2s.SERCTRL[index].bit.SERMODE = I2S_SERCTRL_SERMODE_RX_Val;
+  }
+
   inline void enableClockUnit(int index) {
     if (index == 0) {
       while(i2s.SYNCBUSY.bit.CKEN0);
@@ -132,7 +136,11 @@ public:
   }
 
   inline int dmaTriggerSource(int index) {
-    return (index == 0) ? I2S_DMAC_ID_TX_0 : I2S_DMAC_ID_TX_1;
+    if (i2s.SERCTRL[index].bit.SERMODE == I2S_SERCTRL_SERMODE_TX_Val) {
+      return (index == 0) ? I2S_DMAC_ID_TX_0 : I2S_DMAC_ID_TX_1;
+    } else {
+      return (index == 0) ? I2S_DMAC_ID_RX_0 : I2S_DMAC_ID_RX_1;
+    }
   }
 
   inline int txReady(int index) {
@@ -154,6 +162,28 @@ public:
      i2s.INTFLAG.bit.TXRDY0 = 1;
     } else {
      i2s.INTFLAG.bit.TXRDY1 = 1;
+    }
+  }
+
+  inline int rxReady(int index) {
+    return (index == 0) ? i2s.INTFLAG.bit.RXRDY0 :i2s.INTFLAG.bit.RXRDY1;
+  }
+
+  inline int32_t readData(int index) {
+    if (index == 0) {
+      while (i2s.SYNCBUSY.bit.DATA0);
+    } else {
+      while (i2s.SYNCBUSY.bit.DATA1);
+    }
+
+    return i2s.DATA[index].bit.DATA;
+  }
+
+  inline void clearRxReady(int index) {
+    if (index == 0) {
+     i2s.INTFLAG.bit.RXRDY0 = 1;
+    } else {
+     i2s.INTFLAG.bit.RXRDY1 = 1;
     }
   }
 

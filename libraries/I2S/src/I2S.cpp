@@ -35,7 +35,9 @@ I2SClass::I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, u
   _sckPin(sckPin),
   _fsPin(fsPin),
 
+  _state(I2S_STATE_IDLE),
   _dmaChannel(-1),
+  _bitsPerSample(0),
   _dmaTransferInProgress(false),
 
   _onTransmit(NULL)
@@ -44,6 +46,10 @@ I2SClass::I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, u
 
 int I2SClass::begin(int mode, long sampleRate, int bitsPerSample)
 {
+  if (_state != I2S_STATE_IDLE) {
+    return 1;
+  }
+
   switch (mode) {
     case I2S_PHILIPS_MODE:
       break;
@@ -56,6 +62,7 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample)
     case 8:
     case 16:
     case 32:
+      _bitsPerSample = bitsPerSample;
       break;
 
     default:
@@ -92,18 +99,10 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample)
 
   i2sd.setSlotAdjustedLeft(_deviceIndex);
   i2sd.setClockUnit(_deviceIndex);
-  i2sd.setTxMode(_deviceIndex);
 
   pinPeripheral(_sdPin, PIO_COM);
 
   i2sd.enable();
-  i2sd.enableClockUnit(_deviceIndex);
-  i2sd.enableSerializer(_deviceIndex);
-
-  DMA.incSrc(_dmaChannel);
-  DMA.onTransferComplete(_dmaChannel, I2SClass::onDmaTransferComplete);
-  DMA.setTriggerSource(_dmaChannel, i2sd.dmaTriggerSource(_deviceIndex));
-  DMA.setTransferWidth(_dmaChannel, bitsPerSample);
 
   _doubleBuffer.reset();
 
@@ -116,6 +115,7 @@ void I2SClass::end()
     DMA.freeChannel(_dmaChannel);
   }
 
+  _state = I2S_STATE_IDLE;
   _dmaTransferInProgress = false;
 
   i2sd.disableSerializer(_deviceIndex);
@@ -139,12 +139,26 @@ void I2SClass::end()
 
 int I2SClass::available()
 {
-  return 0;
+  if (_state != I2S_STATE_RECEIVER) {
+    enableReceiver();
+  }
+
+  return (_bitsPerSample / 8);
 }
 
 int I2SClass::read()
 {
-  return 0;
+  if (_state != I2S_STATE_RECEIVER) {
+    enableReceiver();
+  }
+
+  while(!i2sd.rxReady(_deviceIndex));
+
+  int sample = i2sd.readData(_deviceIndex);
+
+  i2sd.clearRxReady(_deviceIndex);
+
+  return sample;
 }
 
 int I2SClass::peek()
@@ -168,6 +182,10 @@ size_t I2SClass::write(const uint8_t *buffer, size_t size)
 
 size_t I2SClass::availableForWrite()
 {
+  if (_state != I2S_STATE_TRANSMITTER) {
+    enableTransmitter();
+  }
+
   uint8_t enableInterrupts = ((__get_PRIMASK() & 0x1) == 0);
   size_t space;
 
@@ -191,6 +209,10 @@ size_t I2SClass::write(int sample)
 
 size_t I2SClass::write(int32_t sample)
 {
+  if (_state != I2S_STATE_TRANSMITTER) {
+    enableTransmitter();
+  }
+
   while(!i2sd.txReady(_deviceIndex));
 
   i2sd.writeData(_deviceIndex, sample);
@@ -202,6 +224,10 @@ size_t I2SClass::write(int32_t sample)
 
 size_t I2SClass::write(const void *buffer, size_t size)
 {
+  if (_state != I2S_STATE_TRANSMITTER) {
+    enableTransmitter();
+  }
+
   uint8_t enableInterrupts = ((__get_PRIMASK() & 0x1) == 0);
   size_t written;
 
@@ -231,7 +257,8 @@ void I2SClass::onTransmit(void(*function)(void))
   _onTransmit = function;
 }
 
-void I2SClass::enableClock(int divider) {
+void I2SClass::enableClock(int divider)
+{
   while (GCLK->STATUS.bit.SYNCBUSY);
   GCLK->GENDIV.bit.ID = _clockGenerator;
   GCLK->GENDIV.bit.DIV = SystemCoreClock / divider;
@@ -250,7 +277,8 @@ void I2SClass::enableClock(int divider) {
   while (GCLK->STATUS.bit.SYNCBUSY);
 }
 
-void I2SClass::disableClock() {
+void I2SClass::disableClock()
+{
   while (GCLK->STATUS.bit.SYNCBUSY);
   GCLK->GENCTRL.bit.ID = _clockGenerator;
   GCLK->GENCTRL.bit.SRC = GCLK_GENCTRL_SRC_DFLL48M_Val;
@@ -263,6 +291,34 @@ void I2SClass::disableClock() {
   GCLK->CLKCTRL.bit.CLKEN = 0;
 
   while (GCLK->STATUS.bit.SYNCBUSY);
+}
+
+void I2SClass::enableTransmitter()
+{
+  i2sd.setTxMode(_deviceIndex);
+  i2sd.enableClockUnit(_deviceIndex);
+  i2sd.enableSerializer(_deviceIndex);
+
+  DMA.incSrc(_dmaChannel);
+  DMA.onTransferComplete(_dmaChannel, I2SClass::onDmaTransferComplete);
+  DMA.setTriggerSource(_dmaChannel, i2sd.dmaTriggerSource(_deviceIndex));
+  DMA.setTransferWidth(_dmaChannel, _bitsPerSample);
+
+  _state = I2S_STATE_TRANSMITTER;
+}
+
+void I2SClass::enableReceiver()
+{
+  i2sd.setRxMode(_deviceIndex);
+  i2sd.enableClockUnit(_deviceIndex);
+  i2sd.enableSerializer(_deviceIndex);
+
+  DMA.incSrc(_dmaChannel);
+  DMA.onTransferComplete(_dmaChannel, I2SClass::onDmaTransferComplete);
+  DMA.setTriggerSource(_dmaChannel, i2sd.dmaTriggerSource(_deviceIndex));
+  DMA.setTransferWidth(_dmaChannel, _bitsPerSample);
+
+  _state = I2S_STATE_RECEIVER;
 }
 
 void I2SClass::onTransferComplete(void)

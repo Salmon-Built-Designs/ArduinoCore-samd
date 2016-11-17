@@ -27,7 +27,6 @@ typedef enum {
   I2S_PHILIPS_MODE
 } i2s_mode_t;
 
-
 class I2SClass : public Stream
 {
 public:
@@ -58,11 +57,20 @@ private:
   void enableClock(int divider);
   void disableClock();
 
+  void enableTransmitter();
+  void enableReceiver();
+
   void onTransferComplete(void);
 
   static void onDmaTransferComplete(int);
 
 private:
+  typedef enum {
+    I2S_STATE_IDLE,
+    I2S_STATE_TRANSMITTER,
+    I2S_STATE_RECEIVER
+  } i2s_state_t;
+
   static int _beginCount;
 
   uint8_t _deviceIndex;
@@ -71,7 +79,9 @@ private:
   uint8_t _sckPin;
   uint8_t _fsPin;
 
+  i2s_state_t _state;
   int _dmaChannel;
+  int _bitsPerSample;
 
   volatile bool _dmaTransferInProgress;
   I2SDoubleBuffer _doubleBuffer;
