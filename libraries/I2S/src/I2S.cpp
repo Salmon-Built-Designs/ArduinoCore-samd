@@ -63,6 +63,8 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, bool driveCloc
 
   switch (mode) {
     case I2S_PHILIPS_MODE:
+    case I2S_RIGHT_JUSTIFIED_MODE:
+    case I2S_LEFT_JUSTIFIED_MODE:
       break;
 
     default:
@@ -109,17 +111,25 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, bool driveCloc
   }
 
   i2sd.disable();
-  i2sd.set1BitDelay(_deviceIndex);
+
+  if (mode == I2S_PHILIPS_MODE) {
+    i2sd.set1BitDelay(_deviceIndex);
+  } else {
+    i2sd.set0BitDelay(_deviceIndex);
+  }
   i2sd.setNumberOfSlots(_deviceIndex, 1);
   i2sd.setSlotSize(_deviceIndex, bitsPerSample);
 
   pinPeripheral(_sckPin, PIO_COM);
   pinPeripheral(_fsPin, PIO_COM);
 
-  i2sd.setSlotAdjustedLeft(_deviceIndex);
-  if (driveClock) {
-    i2sd.setClockUnit(_deviceIndex);
+  if (mode == I2S_RIGHT_JUSTIFIED_MODE) {
+    i2sd.setSlotAdjustedRight(_deviceIndex);
+  } else {
+    i2sd.setSlotAdjustedLeft(_deviceIndex);
   }
+
+  i2sd.setClockUnit(_deviceIndex);
 
   pinPeripheral(_sdPin, PIO_COM);
 

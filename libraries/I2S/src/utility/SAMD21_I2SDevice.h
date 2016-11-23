@@ -63,6 +63,10 @@ public:
     i2s.CLKCTRL[index].bit.FSSEL = I2S_CLKCTRL_FSSEL_FSPIN_Val;
   }
 
+  inline void set0BitDelay(int index) {
+    i2s.CLKCTRL[index].bit.BITDELAY = I2S_CLKCTRL_BITDELAY_LJ_Val;
+  }
+
   inline void set1BitDelay(int index) {
     i2s.CLKCTRL[index].bit.BITDELAY = I2S_CLKCTRL_BITDELAY_I2S_Val;
   }
@@ -93,6 +97,10 @@ public:
        i2s.SERCTRL[index].bit.DATASIZE = I2S_SERCTRL_DATASIZE_8_Val;
        break;
     }
+  }
+
+  inline void setSlotAdjustedRight(int index) {
+    i2s.SERCTRL[index].bit.SLOTADJ = I2S_SERCTRL_SLOTADJ_RIGHT_Val;
   }
 
   inline void setSlotAdjustedLeft(int index) {

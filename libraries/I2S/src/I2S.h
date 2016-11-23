@@ -24,7 +24,9 @@
 #include "utility/I2SDoubleBuffer.h"
 
 typedef enum {
-  I2S_PHILIPS_MODE
+  I2S_PHILIPS_MODE,
+  I2S_RIGHT_JUSTIFIED_MODE,
+  I2S_LEFT_JUSTIFIED_MODE
 } i2s_mode_t;
 
 class I2SClass : public Stream
