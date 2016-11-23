@@ -47,6 +47,16 @@ I2SClass::I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, u
 
 int I2SClass::begin(int mode, long sampleRate, int bitsPerSample)
 {
+  return begin(mode, sampleRate, bitsPerSample, true);
+}
+
+int I2SClass::begin(int mode, int bitsPerSample)
+{
+  return begin(mode, 0, bitsPerSample, false);
+}
+
+int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, bool driveClock)
+{
   if (_state != I2S_STATE_IDLE) {
     return 1;
   }
@@ -88,7 +98,15 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample)
 
   _beginCount++;
 
-  enableClock(sampleRate * 2 * bitsPerSample);
+  if (driveClock) {
+    enableClock(sampleRate * 2 * bitsPerSample);
+
+    i2sd.setSerialClockSelectMasterClockDiv(_deviceIndex);
+    i2sd.setFrameSyncSelectSerialClockDiv(_deviceIndex);
+  } else {
+    i2sd.setSerialClockSelectPin(_deviceIndex);
+    i2sd.setFrameSyncSelectPin(_deviceIndex);
+  }
 
   i2sd.disable();
   i2sd.set1BitDelay(_deviceIndex);
@@ -99,7 +117,9 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample)
   pinPeripheral(_fsPin, PIO_COM);
 
   i2sd.setSlotAdjustedLeft(_deviceIndex);
-  i2sd.setClockUnit(_deviceIndex);
+  if (driveClock) {
+    i2sd.setClockUnit(_deviceIndex);
+  }
 
   pinPeripheral(_sdPin, PIO_COM);
 

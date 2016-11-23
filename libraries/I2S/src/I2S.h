@@ -33,6 +33,7 @@ public:
   I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, uint8_t sckPin, uint8_t fsPin);
 
   int begin(int mode, long sampleRate, int bitsPerSample);
+  int begin(int mode, int bitsPerSample);
   void end();
 
   // from Stream
@@ -57,6 +58,8 @@ public:
   void onReceive(void(*)(void));
 
 private:
+  int begin(int mode, long sampleRate, int bitsPerSample, bool driveClock);
+
   void enableClock(int divider);
   void disableClock();
 

@@ -47,6 +47,22 @@ public:
     return (index == 0) ? I2S_GCLK_ID_0 : I2S_GCLK_ID_1;
   }
 
+  inline void setSerialClockSelectMasterClockDiv(int index) {
+    i2s.CLKCTRL[index].bit.SCKSEL = I2S_CLKCTRL_SCKSEL_MCKDIV_Val;
+  }
+
+  inline void setSerialClockSelectPin(int index) {
+    i2s.CLKCTRL[index].bit.SCKSEL = I2S_CLKCTRL_SCKSEL_SCKPIN_Val;
+  }
+
+  inline void setFrameSyncSelectSerialClockDiv(int index) {
+    i2s.CLKCTRL[index].bit.FSSEL = I2S_CLKCTRL_FSSEL_SCKDIV_Val;
+  }
+
+  inline void setFrameSyncSelectPin(int index) {
+    i2s.CLKCTRL[index].bit.FSSEL = I2S_CLKCTRL_FSSEL_FSPIN_Val;
+  }
+
   inline void set1BitDelay(int index) {
     i2s.CLKCTRL[index].bit.BITDELAY = I2S_CLKCTRL_BITDELAY_I2S_Val;
   }
