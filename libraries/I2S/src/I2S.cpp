@@ -194,6 +194,11 @@ int I2SClass::read()
 
   read(&sample, _bitsPerSample / 8);
 
+  if (_bitsPerSample == 16 && (sample & 0x8000)) {
+    // sign extend value
+    sample |= 0xffff0000;
+  }
+
   return sample;
 }
 
@@ -210,6 +215,11 @@ int I2SClass::peek()
   if (enableInterrupts) {
     // re-enable the interrupts
     __enable_irq();
+  }
+
+  if (_bitsPerSample == 16 && (sample & 0x8000)) {
+    // sign extend value
+    sample |= 0xffff0000;
   }
 
   return sample;
