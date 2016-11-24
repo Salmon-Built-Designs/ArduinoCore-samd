@@ -47,11 +47,13 @@ I2SClass::I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, u
 
 int I2SClass::begin(int mode, long sampleRate, int bitsPerSample)
 {
+  // master mode (driving clock and frame select pins - output)
   return begin(mode, sampleRate, bitsPerSample, true);
 }
 
 int I2SClass::begin(int mode, int bitsPerSample)
 {
+  // slave mode (not driving clock and frame select pin - input)
   return begin(mode, 0, bitsPerSample, false);
 }
 
@@ -68,6 +70,7 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, bool driveCloc
       break;
 
     default:
+      // invalid mode
       return 1;
   }
 
@@ -79,14 +82,17 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, bool driveCloc
       break;
 
     default:
+      // invalid bits per sample
       return 1;
   }
 
+  // try to allocate a DMA channel
   DMA.begin();
 
   _dmaChannel = DMA.allocateChannel();
 
   if (_dmaChannel < 0) {
+    // no DMA channel available
     return 1;
   }
 
@@ -101,15 +107,18 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, bool driveCloc
   _beginCount++;
 
   if (driveClock) {
+    // set up clock
     enableClock(sampleRate * 2 * bitsPerSample);
 
     i2sd.setSerialClockSelectMasterClockDiv(_deviceIndex);
     i2sd.setFrameSyncSelectSerialClockDiv(_deviceIndex);
   } else {
+    // use input signal from SCK and FS pins
     i2sd.setSerialClockSelectPin(_deviceIndex);
     i2sd.setFrameSyncSelectPin(_deviceIndex);
   }
 
+  // disable device before continuing
   i2sd.disable();
 
   if (mode == I2S_PHILIPS_MODE) {
@@ -119,6 +128,7 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, bool driveCloc
   }
   i2sd.setNumberOfSlots(_deviceIndex, 1);
   i2sd.setSlotSize(_deviceIndex, bitsPerSample);
+  i2sd.setDataSize(_deviceIndex, bitsPerSample);
 
   pinPeripheral(_sckPin, PIO_COM);
   pinPeripheral(_fsPin, PIO_COM);
@@ -133,6 +143,7 @@ int I2SClass::begin(int mode, long sampleRate, int bitsPerSample, bool driveCloc
 
   pinPeripheral(_sdPin, PIO_COM);
 
+  // done configure enable
   i2sd.enable();
 
   _doubleBuffer.reset();
@@ -152,6 +163,7 @@ void I2SClass::end()
   i2sd.disableSerializer(_deviceIndex);
   i2sd.disableClockUnit(_deviceIndex);
 
+  // set the pins back to input mode
   pinMode(_sdPin, INPUT);
   pinMode(_fsPin, INPUT);
   pinMode(_sckPin, INPUT);
@@ -183,10 +195,12 @@ int I2SClass::available()
   avail = _doubleBuffer.available();
 
   if (_dmaTransferInProgress == false && _doubleBuffer.available() == 0) {
+    // no DMA transfer in progress, start a receive process
     _dmaTransferInProgress = true;
 
     DMA.transfer(_dmaChannel, i2sd.data(_deviceIndex), _doubleBuffer.data(), _doubleBuffer.availableForWrite());
 
+    // switch to the next buffer for user output (will be empty)
     _doubleBuffer.swap();
   }
 
@@ -198,24 +212,37 @@ int I2SClass::available()
   return avail;
 }
 
+union i2s_sample_t {
+  uint8_t b8;
+  int16_t b16;
+  int32_t b32;
+};
+
 int I2SClass::read()
 {
-  int sample = 0;
+  i2s_sample_t sample;
+
+  sample.b32 = 0;
 
   read(&sample, _bitsPerSample / 8);
 
-  if (_bitsPerSample == 16 && (sample & 0x8000)) {
-    // sign extend value
-    sample |= 0xffff0000;
+  if (_bitsPerSample == 32) {
+    return sample.b32;
+  } else if (_bitsPerSample == 16) {
+    return sample.b16;
+  } else if (_bitsPerSample == 8) {
+    return sample.b8;
+  } else {
+    return 0;
   }
-
-  return sample;
 }
 
 int I2SClass::peek()
 {
   uint8_t enableInterrupts = ((__get_PRIMASK() & 0x1) == 0);
-  int sample = 0;
+  i2s_sample_t sample;
+
+  sample.b32 = 0;
 
   // disable interrupts,
   __disable_irq();
@@ -227,16 +254,20 @@ int I2SClass::peek()
     __enable_irq();
   }
 
-  if (_bitsPerSample == 16 && (sample & 0x8000)) {
-    // sign extend value
-    sample |= 0xffff0000;
+  if (_bitsPerSample == 32) {
+    return sample.b32;
+  } else if (_bitsPerSample == 16) {
+    return sample.b16;
+  } else if (_bitsPerSample == 8) {
+    return sample.b8;
+  } else {
+    return 0;
   }
-
-  return sample;
 }
 
 void I2SClass::flush()
 {
+  // do nothing, writes are DMA triggered
 }
 
 size_t I2SClass::write(uint8_t data)
@@ -285,10 +316,12 @@ int I2SClass::read(void* buffer, size_t size)
   int read = _doubleBuffer.read(buffer, size);
 
   if (_dmaTransferInProgress == false && _doubleBuffer.available() == 0) {
+    // no DMA transfer in progress, start a receive process
     _dmaTransferInProgress = true;
 
     DMA.transfer(_dmaChannel, i2sd.data(_deviceIndex), _doubleBuffer.data(), _doubleBuffer.availableForWrite());
 
+    // switch to the next buffer for user output (will be empty)
     _doubleBuffer.swap();
   }
 
@@ -311,6 +344,7 @@ size_t I2SClass::write(int32_t sample)
     enableTransmitter();
   }
 
+  // this is a blocking write
   while(!i2sd.txReady(_deviceIndex));
 
   i2sd.writeData(_deviceIndex, sample);
@@ -335,10 +369,12 @@ size_t I2SClass::write(const void *buffer, size_t size)
   written = _doubleBuffer.write(buffer, size);
 
   if (_dmaTransferInProgress == false && _doubleBuffer.available()) {
+    // no DMA transfer in progress, start a transmit process
     _dmaTransferInProgress = true;
 
     DMA.transfer(_dmaChannel, _doubleBuffer.data(), i2sd.data(_deviceIndex), _doubleBuffer.available());
 
+    // switch to the next buffer for input
     _doubleBuffer.swap();
   }
 
@@ -362,16 +398,19 @@ void I2SClass::onReceive(void(*function)(void))
 
 void I2SClass::enableClock(int divider)
 {
+  // configure the clock divider
   while (GCLK->STATUS.bit.SYNCBUSY);
   GCLK->GENDIV.bit.ID = _clockGenerator;
   GCLK->GENDIV.bit.DIV = SystemCoreClock / divider;
 
+  // use the DFLL as the source
   while (GCLK->STATUS.bit.SYNCBUSY);
   GCLK->GENCTRL.bit.ID = _clockGenerator;
   GCLK->GENCTRL.bit.SRC = GCLK_GENCTRL_SRC_DFLL48M_Val;
   GCLK->GENCTRL.bit.IDC = 1;
   GCLK->GENCTRL.bit.GENEN = 1;
 
+  // enable
   while (GCLK->STATUS.bit.SYNCBUSY);
   GCLK->CLKCTRL.bit.ID = i2sd.glckId(_deviceIndex);
   GCLK->CLKCTRL.bit.GEN = _clockGenerator;
@@ -427,26 +466,39 @@ void I2SClass::enableReceiver()
 void I2SClass::onTransferComplete(void)
 {
   if (_state == I2S_STATE_TRANSMITTER) {
+    // transmit complete
+
     if (_doubleBuffer.available()) {
+      // output is available to transfer, start the DMA process for the current buffer
+
       DMA.transfer(_dmaChannel, _doubleBuffer.data(), i2sd.data(_deviceIndex), _doubleBuffer.available());
 
+      // swap to the next user buffer for input
       _doubleBuffer.swap();
     } else {
+      // no user data buffered to send
       _dmaTransferInProgress = false;
     }
 
+    // call the users transmit callback if provided
     if (_onTransmit) {
       _onTransmit();
     }
   } else {
+    // receive complete
+
     if (_doubleBuffer.available() == 0) {
+      // the user has read all the current input, start the DMA process to fill it again
       DMA.transfer(_dmaChannel, i2sd.data(_deviceIndex), _doubleBuffer.data(), _doubleBuffer.availableForWrite());
 
+      // swap to the next buffer that has previously been filled, so that the user can read it
       _doubleBuffer.swap(_doubleBuffer.availableForWrite());
     } else {
+      // user has not read current data, no free buffer to transfer into
       _dmaTransferInProgress = false;
     }
 
+    // call the users receveive callback if provided
     if (_onReceive) {
       _onReceive();
     }

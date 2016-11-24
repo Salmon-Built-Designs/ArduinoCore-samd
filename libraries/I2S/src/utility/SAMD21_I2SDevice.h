@@ -79,21 +79,37 @@ public:
     switch (size) {
      case 32:
        i2s.CLKCTRL[index].bit.SLOTSIZE = I2S_CLKCTRL_SLOTSIZE_32_Val;
-       i2s.SERCTRL[index].bit.DATASIZE = I2S_SERCTRL_DATASIZE_32_Val;
        break;
 
      case 24:
        i2s.CLKCTRL[index].bit.SLOTSIZE = I2S_CLKCTRL_SLOTSIZE_24_Val;
-       i2s.SERCTRL[index].bit.DATASIZE = I2S_SERCTRL_DATASIZE_24_Val;
        break;
 
      case 16:
        i2s.CLKCTRL[index].bit.SLOTSIZE = I2S_CLKCTRL_SLOTSIZE_16_Val;
-       i2s.SERCTRL[index].bit.DATASIZE = I2S_SERCTRL_DATASIZE_16_Val;
        break;
 
      case 8:
        i2s.CLKCTRL[index].bit.SLOTSIZE = I2S_CLKCTRL_SLOTSIZE_8_Val;
+       break;
+    }
+  }
+
+  inline void setDataSize(int index, int size) {
+    switch (size) {
+     case 32:
+       i2s.SERCTRL[index].bit.DATASIZE = I2S_SERCTRL_DATASIZE_32_Val;
+       break;
+
+     case 24:
+       i2s.SERCTRL[index].bit.DATASIZE = I2S_SERCTRL_DATASIZE_24_Val;
+       break;
+
+     case 16:
+       i2s.SERCTRL[index].bit.DATASIZE = I2S_SERCTRL_DATASIZE_16_Val;
+       break;
+
+     case 8:
        i2s.SERCTRL[index].bit.DATASIZE = I2S_SERCTRL_DATASIZE_8_Val;
        break;
     }

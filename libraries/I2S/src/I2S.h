@@ -32,9 +32,12 @@ typedef enum {
 class I2SClass : public Stream
 {
 public:
+  // the device index and pins must map to the "COM" pads in Table 6-1 of the datasheet 
   I2SClass(uint8_t deviceIndex, uint8_t clockGenerator, uint8_t sdPin, uint8_t sckPin, uint8_t fsPin);
 
+  // the SCK and FS pins are driven as outputs using the sample rate
   int begin(int mode, long sampleRate, int bitsPerSample);
+  // the SCK and FS pins are inputs, other side controls sample rate
   int begin(int mode, int bitsPerSample);
   void end();
 
@@ -98,6 +101,8 @@ private:
   void (*_onReceive)(void);
 };
 
+// "I2S" is already defined by the CMSIS device, undefine it so the I2SClass
+// instance can be called I2S
 #undef I2S
 
 #if I2S_INTERFACES_COUNT > 0

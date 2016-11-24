@@ -19,6 +19,9 @@
 
 #define NUM_DMA_CHANNELS 1
 
+/*
+  WARNING: The API for this class may change and it's not intended for public use!
+*/
 class DMAClass
 {
   public:
