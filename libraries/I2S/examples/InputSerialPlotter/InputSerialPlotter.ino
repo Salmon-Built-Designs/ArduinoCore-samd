@@ -1,7 +1,28 @@
+/*
+ This example reads audio data from an Invensense's ICS43432 I2S microphone
+ breakout board, and prints out the samples to the Serial console. The
+ Serial Plotter built into the Arduino IDE can be used to plot the audio
+ data (Tools -> Serial Plotter)
+
+ Circuit:
+ * Arduino/Genuino Zero or MKR1000 board
+ * ICS43432:
+   * GND connected GND
+   * 3.3V connected 3.3V
+   * WS connected to pin 0 (Zero) or pin 3 (MKR1000)
+   * CLK connected to pin 1 (Zero) or pin 2 (MKR1000)
+   * SD connected to pin 9 (Zero) or pin A6 (MKR1000)
+
+ created 17 November 2016
+ by Sandeep Mistry
+ */
+
 #include <I2S.h>
 
 void setup() {
   // Open serial communications and wait for port to open:
+  // A baud rate of 115200 is used instead of 9600 for a faster data rate
+  // on non-native USB ports
   Serial.begin(115200);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
@@ -23,4 +44,3 @@ void loop() {
     Serial.println(sample);
   }
 }
-
