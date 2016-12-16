@@ -67,6 +67,9 @@ SECTIONS
 	{
 		__text_start__ = .;
 
+		KEEP(*(.ota_boot))
+
+		. = ALIGN(256);
 		KEEP(*(.isr_vector))
 		*(.text*)
 
