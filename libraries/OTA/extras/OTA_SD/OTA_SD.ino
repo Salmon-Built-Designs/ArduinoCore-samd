@@ -4,7 +4,7 @@
 #include <FlashStorage.h>
 
 #define OTA_START    0x2000
-#define OTA_SIZE     0x8000
+#define OTA_SIZE     0x4000
 
 #define SKETCH_START (uint32_t*)(OTA_START + OTA_SIZE)
 
