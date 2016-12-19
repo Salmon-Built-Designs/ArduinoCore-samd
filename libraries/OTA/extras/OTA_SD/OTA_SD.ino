@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 #include <SD.h>
 #include <FlashStorage.h>
 
@@ -24,8 +22,7 @@ int main() {
 
   __libc_init_array();
 
-  Serial.begin(115200);
-  Serial.println("OTA begin");
+  delay(1);
 
   if (SD.begin(SDCARD_SS_PIN) && SD.exists(UPDATE_FILE)) {
     File updateFile = SD.open(UPDATE_FILE);
@@ -37,17 +34,14 @@ int main() {
       updateFile.seek(OTA_SIZE);
       updateSize -= OTA_SIZE;
 
-
       uint32_t flashAddress = (uint32_t)SKETCH_START;
 
       // erase the pages
-      Serial.println("Erasing sketch flash ...");
       flash.erase((void*)flashAddress, updateSize);
 
       uint8_t buffer[512];
 
       // write the pages
-      Serial.println("Writing sketch to flash ...");
       for (uint32_t i = 0; i < updateSize; i += sizeof(buffer)) {
         updateFile.read(buffer, sizeof(buffer));
 
@@ -57,8 +51,6 @@ int main() {
       }
 
       updateFlashed = true;
-    } else {
-      Serial.println("Invalid update file size!");
     }
 
     updateFile.close();
@@ -66,13 +58,9 @@ int main() {
     if (updateFlashed) {
       SD.remove(UPDATE_FILE);
     }
-  } else {
-    Serial.println("No SD or update file!");
   }
 
-  Serial.println("Launching sketch");
-  Serial.flush();
-
+  // jump to the sketch
   __set_MSP(*SKETCH_START);
 
   //Reset vector table address
