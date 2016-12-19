@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include <SD.h>
+#include <FlashStorage.h>
 
 #define OTA_START    0x2000
 #define OTA_SIZE     0x8000
@@ -12,6 +13,8 @@
 #endif
 
 #define UPDATE_FILE "UPDATE.BIN"
+
+FlashClass flash;
 
 // Initialize C library
 extern "C" void __libc_init_array(void);
@@ -29,58 +32,26 @@ int main() {
     uint32_t updateSize = updateFile.size();
     bool updateFlashed = false;
 
-    uint32_t PAGE_SIZE = 1 << (3 + NVMCTRL->PARAM.bit.PSZ);
-    uint32_t PAGES = NVMCTRL->PARAM.bit.NVMP;
-    uint32_t MAX_FLASH = PAGE_SIZE * PAGES;
-    uint32_t ROW_SIZE = PAGE_SIZE * 4;
-
-    if (updateSize > OTA_SIZE && updateSize < MAX_FLASH) {
+    if (updateSize > OTA_SIZE) {
+      // skip the OTA section
       updateFile.seek(OTA_SIZE);
-
       updateSize -= OTA_SIZE;
 
-      // erase the pages
+
       uint32_t flashAddress = (uint32_t)SKETCH_START;
 
+      // erase the pages
       Serial.println("Erasing sketch flash ...");
-      for (uint32_t i = 0; i < updateSize; i += ROW_SIZE) {
-        NVMCTRL->ADDR.reg = (flashAddress) / 2;
-        NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_ER;
-        while (!NVMCTRL->INTFLAG.bit.READY);
+      flash.erase((void*)flashAddress, updateSize);
 
-        flashAddress += ROW_SIZE;
-      }
+      uint8_t buffer[512];
 
       // write the pages
-      __attribute__ ((aligned (16))) uint8_t buffer[PAGE_SIZE / 4];
-
-      // Disable automatic page write
-      NVMCTRL->CTRLB.bit.MANW = 1;
-
       Serial.println("Writing sketch to flash ...");
-      flashAddress = (uint32_t)SKETCH_START;
       for (uint32_t i = 0; i < updateSize; i += sizeof(buffer)) {
-        // Execute "PBC" Page Buffer Clear
-        NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_PBC;
-        while (NVMCTRL->INTFLAG.bit.READY == 0);
-
         updateFile.read(buffer, sizeof(buffer));
 
-        volatile uint32_t *dst_addr = (volatile uint32_t *)flashAddress;
-        const uint32_t *src_addr = (uint32_t *)buffer;
-
-        uint32_t size = sizeof(buffer) / 4;
-        while (size) {
-          *dst_addr = *src_addr;
-
-          dst_addr++;
-          src_addr++;
-          size--;
-        }
-
-        // Execute "WP" Write Page
-        NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_WP;
-        while (NVMCTRL->INTFLAG.bit.READY == 0);
+        flash.write((void*)flashAddress, buffer, sizeof(buffer));
 
         flashAddress += sizeof(buffer);
       }
