@@ -26,6 +26,8 @@ public:
   void begin();
   void poll();
   void end();
+
+  void reset();
 };
 
 extern OTAClass OTA;

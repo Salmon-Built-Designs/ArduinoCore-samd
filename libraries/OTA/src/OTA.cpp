@@ -16,6 +16,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include <Arduino.h>
+
 #include "OTA.h"
 
 __attribute__ ((section(".ota_boot")))
@@ -41,6 +43,13 @@ void OTAClass::poll() {
 }
 
 void OTAClass::end() {
+}
+
+void OTAClass::reset() {
+  // Reset the device
+  NVIC_SystemReset() ;
+
+  while (true);
 }
 
 OTAClass OTA;
