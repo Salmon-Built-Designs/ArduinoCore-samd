@@ -27,7 +27,7 @@ unsigned char otaBoot[0x4000] = {
 #elif defined(ARDUINO_SAMD_MKR1000)
   #include "boot/mkr1000.h"
 #elif defined(ARDUINO_SAMD_MKRZERO)
-  #include "boot/mkr1000.h"
+  #include "boot/mkrzero.h"
 #else
   #error "Unsupported board!"
 #endif
