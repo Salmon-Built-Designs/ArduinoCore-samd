@@ -16,22 +16,25 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef _OTA_H_INCLUDED
-#define _OTA_H_INCLUDED
+#ifndef _WIFI101_OTA_H_INCLUDED
+#define _WIFI101_OTA_H_INCLUDED
 
-#include "Wifi101OTA.h"
+#include "WiFi101.h"
 
-class OTAClass {
+class WiFiOTAClass {
 public:
-  OTAClass();
+  WiFiOTAClass();
 
   void begin();
   void poll();
-  void end();
 
-  void reset();
+private:
+  void sendHttpResponse(Client& client, int code, const char* status);
+
+private:
+  WiFiServer _server;
 };
 
-extern OTAClass OTA;
+extern WiFiOTAClass WiFiOTA;
 
 #endif

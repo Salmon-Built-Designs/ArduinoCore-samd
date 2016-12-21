@@ -7,6 +7,7 @@
 #######################################
 
 OTA	KEYWORD1
+WiFiOTA	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
