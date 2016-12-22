@@ -20,6 +20,7 @@
 #define _WIFI101_OTA_H_INCLUDED
 
 #include "WiFi101.h"
+#include "WiFiUdp.h"
 
 class WiFiOTAClass {
 public:
@@ -29,10 +30,13 @@ public:
   void poll();
 
 private:
+  void pollMdns();
+  void pollServer();
   void sendHttpResponse(Client& client, int code, const char* status);
 
 private:
   WiFiServer _server;
+  WiFiUDP _mdnsSocket;
 };
 
 extern WiFiOTAClass WiFiOTA;
