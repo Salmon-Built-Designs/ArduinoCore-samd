@@ -37,6 +37,8 @@ private:
 private:
   WiFiServer _server;
   WiFiUDP _mdnsSocket;
+
+  uint32_t _lastMdnsResponseTime;
 };
 
 extern WiFiOTAClass WiFiOTA;

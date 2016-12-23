@@ -36,25 +36,9 @@
 
 #define BOARD_LENGTH (sizeof(BOARD) - 1)
 
-const byte ARDUINO_SERVICE_REQUEST[37] = {
-  0x00, 0x00, // transaction id
-  0x00, 0x00, // flags
-  0x00, 0x01, // questions
-  0x00, 0x00, // answer RRs
-  0x00, 0x00, // authority RRs
-  0x00, 0x00, // additional RRs
-  0x08,
-  0x5f, 0x61, 0x72, 0x64, 0x75, 0x69, 0x6e, 0x6f, // _arduino
-  0x04, 
-  0x5f, 0x74, 0x63, 0x70, // _tcp
-  0x05,
-  0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x00, // local
-  0x00, 0x0c, // PTR
-  0x00, 0x01 // Class IN
-};
-
 WiFiOTAClass::WiFiOTAClass() :
-  _server(65280)
+  _server(65280),
+  _lastMdnsResponseTime(0)
 {
 }
 
@@ -79,6 +63,23 @@ void WiFiOTAClass::pollMdns()
     return;
   }
 
+  const byte ARDUINO_SERVICE_REQUEST[37] = {
+    0x00, 0x00, // transaction id
+    0x00, 0x00, // flags
+    0x00, 0x01, // questions
+    0x00, 0x00, // answer RRs
+    0x00, 0x00, // authority RRs
+    0x00, 0x00, // additional RRs
+    0x08,
+    0x5f, 0x61, 0x72, 0x64, 0x75, 0x69, 0x6e, 0x6f, // _arduino
+    0x04, 
+    0x5f, 0x74, 0x63, 0x70, // _tcp
+    0x05,
+    0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x00, // local
+    0x00, 0x0c, // PTR
+    0x00, 0x01 // Class IN
+  };
+
   if (packetLength != sizeof(ARDUINO_SERVICE_REQUEST)) {
     while (_mdnsSocket.available()) {
       _mdnsSocket.read();
@@ -94,7 +95,11 @@ void WiFiOTAClass::pollMdns()
     return;
   }
 
-  Serial.println("ARDUINO MDNS SERVICE REQUEST RECEIVED");
+  if ((millis() - _lastMdnsResponseTime) < 1000) {
+    // ignore request
+    return;
+  }
+  _lastMdnsResponseTime = millis();
 
   _mdnsSocket.beginPacket(IPAddress(224, 0, 0, 251), 5353);
 
