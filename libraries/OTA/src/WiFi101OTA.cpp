@@ -206,7 +206,6 @@ void WiFiOTAClass::pollServer()
     do {
       header = client.readStringUntil('\n');
       header.trim();
-      Serial.println(header);
 
       if (header.startsWith("Content-Length: ")) {
         header.remove(0, 16);
