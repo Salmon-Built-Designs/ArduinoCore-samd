@@ -19,7 +19,7 @@
 #ifndef _OTA_H_INCLUDED
 #define _OTA_H_INCLUDED
 
-#include "Wifi101OTA.h"
+#include "WiFi101OTA.h"
 
 class OTAClass {
 public:
