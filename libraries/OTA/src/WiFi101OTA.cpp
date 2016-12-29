@@ -241,6 +241,8 @@ void WiFiOTAClass::pollServer()
     if (read == contentLength) {
       sendHttpResponse(client, 200, "OK");
 
+      delay(250);
+
       OTA.reset();
     } else {
       SD.remove(UPDATE_FILE);
