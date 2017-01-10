@@ -48,11 +48,57 @@
               "packager": "arduino",
               "name": "CMSIS-Atmel",
               "version": "1.0.0"
+            },
+            {
+              "packager": "arduino",
+              "name": "arduinoOTA",
+              "version": "1.1.0"
             }
           ]
         }
       ],
       "tools": [
+          {
+          "name": "arduinoOTA",
+          "version": "1.1.0",
+          "systems": [
+            {
+              "size": "2178351",
+              "checksum": "SHA-256:f7f55f138322c8ba3f4a61283fa120cdad59d721f3020ade34f38e9e20c5a7c8",
+              "host": "i686-linux-gnu",
+              "archiveFileName": "arduinoOTA-1.1.0-linux32.tar.bz2",
+              "url": "http://downloads.arduino.cc/tools/arduinoOTA-1.1.0-linux32.tar.bz2"
+            },
+            {
+              "size": "2178354",
+              "checksum": "SHA-256:2a558296f002a7cbcebdc65a9438cfad08e6ca2c01bcf0a5828a585d069731b7",
+              "host": "x86_64-linux-gnu",
+              "archiveFileName": "arduinoOTA-1.1.0-linux64.tar.bz2",
+              "url": "http://downloads.arduino.cc/tools/arduinoOTA-1.1.0-linux64.tar.bz2"
+            },
+            {
+              "size": "2177034",
+              "checksum": "SHA-256:26ffdf09d74570b9983638e0e09809ed2d738d01975a45332650507d00001af9",
+              "host": "arm-linux-gnueabihf",
+              "archiveFileName": "arduinoOTA-1.1.0-linuxarm.tar.bz2",
+              "url": "http://downloads.arduino.cc/tools/arduinoOTA-1.1.0-linuxarm.tar.bz2"
+            },
+            {
+              "size": "2178354",
+              "checksum": "SHA-256:c9e44de65f6229432da00c9f7b5ff5f469b83320b8c4acaff6b8c8cd7b14b046",
+              "host": "i386-apple-darwin11",
+              "archiveFileName": "arduinoOTA-1.1.0-osx.tar.bz2",
+              "url": "http://downloads.arduino.cc/tools/arduinoOTA-1.1.0-osx.tar.bz2"
+            },
+            {
+              "size": "2459460",
+              "checksum": "SHA-256:eeae3291173191540d4a279ea887430e947833b8942422fded15ef399eaa904c",
+              "host": "i686-mingw32",
+              "archiveFileName": "arduinoOTA-1.1.0-windows.zip",
+              "url": "http://downloads.arduino.cc/tools/arduinoOTA-1.1.0-windows.zip"
+            }
+          ]
+        }
       ]
     }
   ]
