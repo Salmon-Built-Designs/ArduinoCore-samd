@@ -25,10 +25,6 @@ class OTAClass {
 public:
   OTAClass();
 
-  void begin();
-  void poll();
-  void end();
-
   void reset();
 };
 

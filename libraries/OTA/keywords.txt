@@ -13,10 +13,6 @@ WiFiOTA	KEYWORD1
 # Methods and Functions (KEYWORD2)
 #######################################
 
-begin	KEYWORD2
-poll	KEYWORD2
-end	KEYWORD2
-
 reset	KEYWORD2
 
 #######################################

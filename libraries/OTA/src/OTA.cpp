@@ -36,15 +36,6 @@ unsigned char otaBoot[0x4000] = {
 OTAClass::OTAClass() {
 }
 
-void OTAClass::begin() {
-}
-
-void OTAClass::poll() {
-}
-
-void OTAClass::end() {
-}
-
 void OTAClass::reset() {
   // Reset the device
   NVIC_SystemReset() ;
