@@ -145,7 +145,6 @@ tools.bossac_remote.upload.pattern=/usr/bin/run-bossac {upload.verbose} --port=t
 tools.bossac.network_cmd={runtime.tools.arduinoOTA.path}/bin/arduinoOTA
 tools.bossac.upload.network_pattern="{network_cmd}" -address {serial.port} -port 65280 -sketch "{build.path}/{build.project_name}.bin" -upload /sketch -b
 
-
 #
 # OpenOCD sketch upload
 #
