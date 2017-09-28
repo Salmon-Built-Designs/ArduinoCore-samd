@@ -166,10 +166,12 @@ extern SERCOM sercom5;
 
 // Serial1
 extern Uart Serial1;
-#define PIN_SERIAL1_RX (13ul)
-#define PIN_SERIAL1_TX (14ul)
-#define PAD_SERIAL1_TX (UART_TX_PAD_2)
-#define PAD_SERIAL1_RX (SERCOM_RX_PAD_3)
+#define PIN_SERIAL1_RX (1ul) //(13ul)
+#define PIN_SERIAL1_TX (0ul) //(14ul)
+#define PAD_SERIAL1_TX UART_TX_PAD_0 // (UART_TX_PAD_0) /*UART_TX_RTS_CTS_PAD_0_2_3*/) // UART_TX_PAD_2
+#define PAD_SERIAL1_RX (SERCOM_RX_PAD_1) // (SERCOM_RX_PAD_3)
+#define PIN_SERIAL2_RTS (14ul)
+#define PIN_SERIAL2_CTS (13ul)
 #endif // __cplusplus
 
 // These serial port names are intended to allow libraries and architecture-neutral
