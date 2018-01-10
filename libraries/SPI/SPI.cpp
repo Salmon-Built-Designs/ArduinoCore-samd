@@ -280,6 +280,14 @@ void SPIClass::onReceive(byte(*function)(byte))
 
 void SPIClass::onService()
 {
+  if (_p_sercom->isSlaveSelectLowSPI()) {
+    if (onSelectCallback) {
+      onSelectCallback();
+    }
+
+    _p_sercom->acknowledgeSPISlaveSelectLow();
+  }
+
   if (_p_sercom->isReceiveCompleteSPI()) {
     byte in = _p_sercom->readDataSPI();
 
@@ -288,14 +296,6 @@ void SPIClass::onService()
 
       _p_sercom->writeDataSPI(out);
     }
-  }
-
-  if (_p_sercom->isSlaveSelectLowSPI()) {
-    if (onSelectCallback) {
-      onSelectCallback();
-    }
-
-    _p_sercom->acknowledgeSPISlaveSelectLow();
   }
 }
 
