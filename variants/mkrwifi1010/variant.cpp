@@ -146,7 +146,7 @@ const PinDescription g_APinDescription[] = {
 +------------+------------------+--------+-----------------+--------+-----+-----+-----+-----+---------+---------+--------+--------+----------+----------+
 */
                                                                                                                                                // DIPO=3 DOPO=0
-  { PORTA, 12, PIO_SERCOM,     (PIN_ATTR_NONE                                ), No_ADC_Channel, NOT_ON_PWM, NOT_ON_TIMER, EXTERNAL_INT_NONE }, // MOSI: SERCOM2/PAD[0]
+  { PORTA, 12, PIO_SERCOM,     (PIN_ATTR_DIGITAL                             ), No_ADC_Channel, NOT_ON_PWM, NOT_ON_TIMER, EXTERNAL_INT_NONE }, // MOSI: SERCOM2/PAD[0]
   { PORTA, 13, PIO_SERCOM,     (PIN_ATTR_NONE                                ), No_ADC_Channel, NOT_ON_PWM, NOT_ON_TIMER, EXTERNAL_INT_NONE }, // SCK:  SERCOM2/PAD[1]
   { PORTA, 14, PIO_SERCOM,     (PIN_ATTR_DIGITAL                             ), No_ADC_Channel, NOT_ON_PWM, NOT_ON_TIMER, EXTERNAL_INT_NONE }, // SS:   as GPIO
   { PORTA, 15, PIO_SERCOM,     (PIN_ATTR_DIGITAL                             ), No_ADC_Channel, NOT_ON_PWM, NOT_ON_TIMER, EXTERNAL_INT_NONE }, // MISO: SERCOM2/PAD[3]
@@ -243,8 +243,8 @@ void SERCOM5_Handler()
   Serial1.IrqHandler();
 }
 
-// SerialGSM
-Uart Serial2(&sercom2, PIN_SERIAL2_RX, PIN_SERIAL2_TX, PAD_SERIAL2_RX, PAD_SERIAL2_TX, PIN_SERIAL2_RTS, PIN_SERIAL2_CTS);
+// SerialFlash
+Uart Serial2(&sercom2, PIN_SERIAL2_RX, PIN_SERIAL2_TX, PAD_SERIAL2_RX, PAD_SERIAL2_TX);
 
 void SERCOM2_Handler()
 {

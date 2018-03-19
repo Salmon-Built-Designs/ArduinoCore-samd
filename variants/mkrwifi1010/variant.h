@@ -158,11 +158,11 @@ extern Uart Serial1;
 #define PAD_SERIAL1_TX (UART_TX_PAD_2)
 #define PAD_SERIAL1_RX (SERCOM_RX_PAD_3)
 
-// Serial2 - GSM
+// SerialFlash - Nina FW upgrade
 extern Uart Serial2;
 #define PIN_SERIAL2_RX (27ul)
 #define PIN_SERIAL2_TX (26ul)
-#define PAD_SERIAL2_TX (UART_TX_RTS_CTS_PAD_0_2_3)
+#define PAD_SERIAL2_TX (UART_TX_PAD_0)
 #define PAD_SERIAL2_RX (SERCOM_RX_PAD_1)
 #define PIN_SERIAL2_RTS (28u)
 #define PIN_SERIAL2_CTS (29u)
@@ -194,7 +194,7 @@ extern Uart Serial2;
 #define Serial                      SerialUSB
 
 // Alias Serial2 to SerialGSM (useful in libraries)
-#define SerialGSM                   Serial2
+#define SerialNina                   Serial2
 
 #define ARDUINO_GSM_COMPATIBILITY_WRAPPER
 #define GSM_DEFAULT_STREAM          SerialGSM
