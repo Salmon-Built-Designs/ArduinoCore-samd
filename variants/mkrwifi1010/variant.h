@@ -64,10 +64,11 @@
 #define ADC_BATTERY	(32u)
 
 //GSM
-#define GSM_RTS    (28u)
-#define GSM_CTS    (29u)
-#define GSM_RESETN (31u)
-#define GSM_DTR    (35u)
+#define NINA_RTS    (28u)
+#define NINA_CTS    (29u)
+#define NINA_GPIO0  (30u)
+#define NINA_RESETN (31u)
+#define NINA_ACK    (35u)
 
 // LEDs
 // ----

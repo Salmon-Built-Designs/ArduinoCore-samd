@@ -132,17 +132,17 @@ const PinDescription g_APinDescription[] = {
  |            | SD SPI           |        |                 |        |     |     |     |     |         |         |        |        |          |          |
  | 26         |                  |  PA12  | GSM_TX          |   12   |     |     |     |     |  *2/00  |   4/00  | TCC2/0 | TCC0/6 |          | AC/CMP0  |
  | 27         |                  |  PA13  | GSM_RX          |   13   |     |     |     |     |  *2/01  |   4/01  | TCC2/1 | TCC0/7 |          | AC/CMP1  |
- | 28         |                  |  PA14  | GSM_RTS         |   14   |     |     |     |     |   2/02  |   4/02  |  TC3/0 | TCC0/4 |          | GCLK_IO0 |
- | 29         |                  |  PA15  | GSM_CTS         |   15   |     |     |     |     |  *2/03  |   4/03  |  TC3/1 | TCC0/5 |          | GCLK_IO1 |
+ | 28         |                  |  PA14  | NINA_RTS        |   14   |     |     |     |     |   2/02  |   4/02  |  TC3/0 | TCC0/4 |          | GCLK_IO0 |
+ | 29         |                  |  PA15  | NINA_CTS        |   15   |     |     |     |     |  *2/03  |   4/03  |  TC3/1 | TCC0/5 |          | GCLK_IO1 |
  | 30         |                  |  PA27  | PMIC_IRQ        |  *15   |     |     |     |     |         |         |        |        |          | GCLK_IO0 |
- | 31         |                  |  PB08  | GSM_RESETN      |   08   |  02 |     | Y14 |     |         |   4/00  |  TC4/0 |        |          |          |
+ | 31         |                  |  PB08  | NINA_RESETN     |   08   |  02 |     | Y14 |     |         |   4/00  |  TC4/0 |        |          |          |
  | 32         |                  |  PB09  | ADC_VBAT        |  *09   |  03 |     | Y15 |     |         |   4/01  |  TC4/1 |        |          |          |
  +------------+------------------+--------+-----------------+--------+-----+-----+-----+-----+---------+---------+--------+--------+----------+----------+
  |            | 32768Hz Crystal  |        |                 |        |     |     |     |     |         |         |        |        |          |          |
  | 33         |                  |  PA00  | XIN32           |   00   |     |     |     |     |         |   1/00  | TCC2/0 |        |          |          |
  | 34         |                  |  PA01  | XOUT32          |   01   |     |     |     |     |         |   1/01  | TCC2/1 |        |          |          |
  +------------+------------------+--------+-----------------+--------+-----+-----+-----+-----+---------+---------+--------+--------+----------+----------+
- | 35         |                  |  PA28  | GSM_DTR         |   01   |     |     |     |     |         |   1/01  | TCC2/1 |        |          |          |
+ | 35         |                  |  PA28  | NINA_ACK        |   01   |     |     |     |     |         |   1/01  | TCC2/1 |        |          |          |
 +------------+------------------+--------+-----------------+--------+-----+-----+-----+-----+---------+---------+--------+--------+----------+----------+
 */
                                                                                                                                                // DIPO=3 DOPO=0
@@ -227,12 +227,12 @@ void initVariant() {
 #endif
 
   // put GSM modem in reset on start to conserve power if it's not used
-  pinMode(GSM_RESETN, OUTPUT);
-  digitalWrite(GSM_RESETN, HIGH);
+  pinMode(NINA_RESETN, OUTPUT);
+  digitalWrite(NINA_RESETN, HIGH);
 
-  // set GSM DTR to LOW on start
-  pinMode(GSM_DTR, OUTPUT);
-  digitalWrite(GSM_DTR, LOW);
+  pinMode(NINA_ACK, INPUT_PULLUP);
+  pinMode(NINA_GPIO0, OUTPUT);
+  digitalWrite(NINA_GPIO0, HIGH);
 }
 
 // Serial1
