@@ -112,21 +112,21 @@ static const uint8_t MISO = PIN_SPI_MISO;
 static const uint8_t SCK  = PIN_SPI_SCK;
 
 // SPI1
-#define PIN_SPI1_MISO    (38u)
+#define PIN_SPI1_MISO    (37u)
 #define PIN_SPI1_MOSI    (36u)
-#define PIN_SPI1_SCK     (37u)
+#define PIN_SPI1_SCK     (38u)
 #define PIN_SPI1_SS      (28u)
-#define PERIPH_SPI1   sercom2
-#define PAD_SPI1_TX   SPI_PAD_0_SCK_1
-#define PAD_SPI1_RX   SERCOM_RX_PAD_3
+#define PERIPH_SPI1   sercom4
+#define PAD_SPI1_TX   SPI_PAD_0_SCK_3
+#define PAD_SPI1_RX   SERCOM_RX_PAD_1
 static const uint8_t SS1   = PIN_SPI1_SS;
 static const uint8_t MOSI1 = PIN_SPI1_MOSI;
 static const uint8_t MISO1 = PIN_SPI1_MISO;
 static const uint8_t SCK1  = PIN_SPI1_SCK;
 
-#define SPIWIFI_SS       SS1
-#define SPIWIFI_ACK      (35u)
-#define SPIWIFI_RESET    (6u)   // fixme! Inverted logic
+#define SPIWIFI_SS       PIN_SPI1_SS
+#define SPIWIFI_ACK      NINA_ACK
+#define SPIWIFI_RESET    (~NINA_RESETN)   // fixme! Inverted logic
 
 
 // Wire Interfaces
