@@ -428,6 +428,12 @@ void USBDeviceClass::initEP(uint32_t ep, uint32_t config)
 		usbd.epBank1SetAddress(ep, &udd_ep_in_cache_buffer[ep]);
 		usbd.epBank1SetType(ep, 3); // BULK IN
 	}
+	else if (config == (USB_ENDPOINT_TYPE_ISOCHRONOUS | USB_ENDPOINT_IN(0)))
+	{
+		usbd.epBank1SetSize(ep, 64);
+		usbd.epBank1SetAddress(ep, &udd_ep_in_cache_buffer[ep]);
+		usbd.epBank1SetType(ep, 2); // ISOCHRONOUS IN
+	}
 	else if (config == USB_ENDPOINT_TYPE_CONTROL)
 	{
 		// Setup Control OUT
